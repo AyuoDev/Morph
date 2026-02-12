@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Morphara - Character Creation Made Simple</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" type="image/x-icon" href="images/morphara_icon.png">
+
+<!-- Modern browsers -->
+<link rel="icon" type="image/png" sizes="32x32" href="images/morphara_icon.png">
+
+<!-- Mobile / PWA -->
+<link rel="apple-touch-icon" href="images/morphara_icon.png">
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+<!-- TOP BAR -->
+<div class="site-topbar">
+  <div class="brand">
+    <img src="images/morphara-icon.png" alt="Morphara logo" />
+    <span>Morphara</span>
+  </div>
+</div>
+
+
+  <!-- HERO -->
+  <div class="hero">
+    <img src="images/hero1.png" class="active" />
+    <img src="images/hero2.png" />
+    <img src="images/hero3.png" />
+
+    <div class="hero-overlay">
+      <div class="hero-content">
+ <h1>Create Game-Ready Characters with <span>Morphara</span></h1>
+    <p>
+      A web-based 3D character creation tool with full blendshape control,
+      modular clothing, animations, and real-time customization built for
+      game developers and creators who need results fast.
+    </p>
+        <button onclick="window.location.href='Morphara.html'">
+          Start Creating
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- FEATURE -->
+   <section class="feature">
+  <div class="feature-text">
+    <h2>Multiple Base Meshes</h2>
+    <p>
+      Morphara supports multiple character bases from low-poly to stylized.
+      New base meshes are added regularly, each with its own clothing,
+      blendshapes, and animations.
+    </p>
+  </div>
+
+  <div class="feature-media">
+    <video autoplay muted loop playsinline>
+      <source src="videos/basemeshes.mp4" type="video/mp4">
+    </video>
+  </div>
+</section>
+<section class="feature feature-reverse">
+  <div class="feature-media">
+    <video autoplay muted loop playsinline>
+      <source src="videos/customization.mp4" type="video/mp4">
+    </video>
+  </div>
+
+  <div class="feature-text">
+    <h2>Full Control, Not Presets</h2>
+    <p>
+      Customize characters using blendshapes, clothing systems,
+      materials, and real-time texture painting.
+      Nothing is locked. Nothing is baked.
+    </p>
+  </div>
+</section>
+  <section class="feature">
+  <div class="feature-media">
+    <video autoplay muted loop playsinline>
+      <source src="videos/gameready.mp4" type="video/mp4">
+    </video>
+  </div>
+
+  <div class="feature-text">
+    <h2>Game-Ready Characters, Instantly</h2>
+    <p>
+      Morphara lets you generate and customize characters directly in the browser
+      no asset packs, no re-rigging, no broken pipelines.
+    </p>
+  </div>
+</section>
+<section class="feature">
+  <div class="feature-text">
+    <h2>Built-In Texture Painting</h2>
+    <p>
+      Paint directly on your characters inside the browser.
+      Edit materials, textures, with uv Maps and details without leaving the tool.
+    </p>
+  </div>
+
+  <div class="feature-media">
+    <video autoplay muted loop playsinline>
+      <source src="videos/texturepaint.mp4" type="video/mp4">
+    </video>
+  </div>
+</section>
+</section>
+  <section class="feature">
+  <div class="feature-media">
+    <video autoplay muted loop playsinline>
+      <source src="videos/animation.mp4" type="video/mp4">
+    </video>
+  </div>
+
+  <div class="feature-text">
+    <h2>Built-In Animation Editor ( Coming Soon )</h2>
+    <p>
+      Create Custom Animations with our built-in animation editor. 
+      Mix and match from a growing library of base animations,
+      or create your own from scratch using our intuitive timeline and keyframe system.
+    </p>
+  </div>
+</section>
+<!-- BEHIND THE SCENES -->
+<section class="behind-scenes">
+  <div class="behind-scenes-inner">
+
+    <div class="behind-text">
+      <h2>Behind the Scenes</h2>
+      <p>
+        Building Morphara wasn’t always smooth.
+        Early versions had some… interesting moments.
+        Every glitch helped shape a better character creator.
+      </p>
+
+      <ul>
+        <li>✔ All shown issues are fixed</li>
+        <li>✔ Tested across real production assets</li>
+        <li>✔ Built by an indie developer, iterated daily</li>
+      </ul>
+    </div>
+
+    <div class="behind-media">
+      <video autoplay muted loop playsinline>
+        <source src="videos/overview.mp4" type="video/mp4">
+      </video>
+      <span class="behind-caption">
+        Early Morphara prototype with basic GLTF loading and blendshape support 😅
+      </span>
+    </div>
+
+  </div>
+</section>
+
+  <!-- CHANGELOG -->
+<section>
+  <h2>Changelog</h2>
+<div class="changelog">
+
+  <div class="version open">
+    <div class="version-header">
+      <span class="arrow">▶</span>
+      <h3>v0.0.9 Texture Painter & Improved Exporting</h3>
+    </div>
+    <ul>
+      <li>Added full texture painting system with real-time canvas-based editing</li>
+      <li>Persistent painted textures across material switches</li>
+      <li>Bucket fill tool with connected-area detection</li>
+      <li>Locked UV map overlay with toggle and opacity control</li>
+      <li>Per-material paint state (base mesh & clothing)</li>
+      <li>Improved painter camera framing and navigation</li>
+      <li>Fixed animation + texture export reliability</li>
+      <li>Exported GLB / GLTF now correctly embeds painted textures</li>
+    </ul>
+  </div>
+
+  <div class="version">
+    <div class="version-header">
+      <span class="arrow">▶</span>
+      <h3>v0.0.8 Bug Fixing & Internal Checkout</h3>
+    </div>
+    <ul>
+      <li>Fixed clothing UI layout inconsistencies and card overflow issues</li>
+      <li>Unified clothing card sizing across all categories and states</li>
+      <li>Improved right-side clothing panel alignment and grid stability</li>
+      <li>Resolved camera framing issues when switching base meshes</li>
+      <li>Improved initial camera focus for full character visibility</li>
+      <li>General UI polish and minor interaction refinements</li>
+    </ul>
+  </div>
+
+  <div class="version">
+    <div class="version-header">
+      <span class="arrow">▶</span>
+      <h3>v0.0.7 Character Randomiser & 3D Card Preview</h3>
+    </div>
+    <ul>
+      <li>Introduced character randomization system</li>
+      <li>Randomizer panel with granular toggles</li>
+      <li>Reset system to restore character to default state</li>
+      <li>Automatic clothing cleanup and blendshape reset logic</li>
+      <li>Improved internal state handling</li>
+      <li>Foundation for future content-driven expansion</li>
+      <li>Added 3D card previews for base meshes, clothes, and animations</li>
+    </ul>
+  </div>
+
+  <div class="version">
+    <div class="version-header">
+      <span class="arrow">▶</span>
+      <h3>v0.0.6 Stand-alone Materials & Meshes</h3>
+    </div>
+    <ul>
+      <li>Per-clothing material & color editing</li>
+      <li>Texture preset system with normal & roughness support</li>
+      <li>Multi-base-mesh compatible clothing database</li>
+      <li>Efficient materials UI rebuild logic</li>
+      <li>GLB & GLTF export with embedded textures</li>
+      <li>Verified Blender import pipeline</li>
+    </ul>
+  </div>
+
+  <div class="version">
+    <div class="version-header">
+      <span class="arrow">▶</span>
+      <h3>v0.0.5 Dynamic Systems For Meshes And Improved UI</h3>
+    </div>
+    <ul>
+      <li>Multiple base mesh support</li>
+      <li>Base mesh registry with thumbnails and metadata</li>
+      <li>Active base mesh selection & highlighting</li>
+      <li>Robust GLB / GLTF export pipeline</li>
+      <li>Preserved materials, colors, and animations</li>
+      <li>Improved UI state management</li>
+      <li>Blendshape UI safety handling</li>
+      <li>Refined model loading & cleanup lifecycle</li>
+    </ul>
+  </div>
+
+  <div class="version">
+    <div class="version-header">
+      <span class="arrow">▶</span>
+      <h3>v0.0.4 Clothing, Materials & Editor UI</h3>
+    </div>
+    <ul>
+      <li>Multi-mode editor UI</li>
+      <li>Dynamic blendshape detection</li>
+      <li>Material color editing system</li>
+      <li>Clothing system foundation</li>
+      <li>Improved model normalization & camera framing</li>
+      <li>Cleaner internal state handling</li>
+    </ul>
+  </div>
+
+  <div class="version">
+    <div class="version-header">
+      <span class="arrow">▶</span>
+      <h3>v0.0.3 Animation & UI</h3>
+    </div>
+    <ul>
+      <li>Idle animation support</li>
+      <li>Blendshape slider system</li>
+      <li>Improved GLTF loading pipeline</li>
+    </ul>
+  </div>
+
+  <div class="version">
+    <div class="version-header">
+      <span class="arrow">▶</span>
+      <h3>v0.0.2 Camera & Blend Shapes</h3>
+    </div>
+    <ul>
+      <li>Dynamic blendshape UI</li>
+      <li>Camera framing & orbit controls</li>
+    </ul>
+  </div>
+
+  <div class="version">
+    <div class="version-header">
+      <span class="arrow">▶</span>
+      <h3>v0.0.1 Starting Morphara</h3>
+    </div>
+    <ul>
+      <li>Initial 3D viewer</li>
+      <li>Model rotation and zoom</li>
+    </ul>
+  </div>
+
+</div>
+
+</section>
+<!-- NEWSLETTER -->
+<section class="newsletter">
+  <div class="newsletter-inner">
+
+    <h2>Stay in the Loop</h2>
+    <p>
+      Get updates about new base meshes, animations, and major Morphara releases.
+      No spam. Unsubscribe anytime.
+    </p>
+
+    <form id="newsletter-form">
+      <input
+        type="email"
+        id="newsletter-email"
+        placeholder="you@email.com"
+        required
+      />
+      <button type="submit">Subscribe</button>
+    </form>
+
+    <span id="newsletter-status"></span>
+
+  </div>
+</section>
+
+  <footer>
+    © 2026 Morphara — v0.0.9
+  </footer>
+
+  <script>
+    const images = document.querySelectorAll(".hero img");
+    let index = 0;
+
+    setInterval(() => {
+      images[index].classList.remove("active");
+      index = (index + 1) % images.length;
+      images[index].classList.add("active");
+    }, 5000);
+
+      document.querySelectorAll(".version-header").forEach(header => {
+    header.addEventListener("click", () => {
+      const version = header.parentElement;
+      version.classList.toggle("open");
+    });
+  });
+    const form = document.getElementById("newsletter-form");
+  const emailInput = document.getElementById("newsletter-email");
+  const status = document.getElementById("newsletter-status");
+
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+
+    const email = emailInput.value.trim();
+    if (!email) return;
+
+    // TEMP: simulate success
+    status.textContent = "Thanks! You'll hear from us soon 🚀";
+    emailInput.value = "";
+
+    // FUTURE:
+    // fetch("/api/newsletter", {
+    //   method: "POST",
+    //   headers: { "Content-Type": "application/json" },
+    //   body: JSON.stringify({ email })
+    // });
+  });
+  </script>
+</body>
+</html>

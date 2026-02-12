@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Morphara - Character Creator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" type="image/x-icon" href="images/morphara_icon.png">
+
+<!-- Modern browsers -->
+<link rel="icon" type="image/png" sizes="32x32" href="images/morphara_icon.png">
+
+<!-- Mobile / PWA -->
+<link rel="apple-touch-icon" href="images/morphara_icon.png">
+  <link rel="stylesheet" href="css/style.css">
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.158.0/build/three.module.js"
+    }
+  }
+  </script>
+</head>
+
+<body class="app">
+<!-- ================= LAUNCH OVERLAY ================= -->
+<div id="launch-overlay" class="launch-overlay">
+
+  <div class="launch-panel">
+
+    <button id="close-launch" class="launch-close">✕</button>
+
+    <div class="launch-hero">
+      <h1>🎉 First 1000 Users Get 1 FREE Export</h1>
+      <p>Create an account today and receive 1 credit instantly.</p>
+    </div>
+
+    <div class="launch-content">
+
+      <h2>Welcome to Morphara v0.1.0</h2>
+
+      <p>
+        Morphara is a browser-based character creation tool designed for game developers,
+        indie creators, and artists who want fast, customizable, animation-ready characters.
+      </p>
+
+      <ul>
+        <li>✔ Multiple Base Meshes</li>
+        <li>✔ Clothing Customization</li>
+        <li>✔ Texture Painting</li>
+        <li>✔ Animation System</li>
+        <li>✔ GLB Export Ready</li>
+      </ul>
+
+      <h3>🚀 Roadmap</h3>
+      <ul>
+        <li>More Base Meshes</li>
+        <li>Full Animator Editor</li>
+        <li>Monster & Creature</li>
+        <li>Advanced Animation Blending</li>
+      </ul>
+
+      <button class="launch-cta open-plans">
+        View Membership Plans
+      </button>
+
+    </div>
+
+  </div>
+</div>
+
+  <!-- ================= TOP BAR ================= -->
+<div id="top-panel">
+
+  <!-- LEFT -->
+  <div class="top-section top-left">
+    <div class="app-brand">
+  <img src="images/morphara_icon.png" class="app-icon" />
+  <div class="app-title">
+    Morphara
+    <span class="app-version">v0.1.0</span>
+  </div>
+</div>
+
+    <button class="top-btn active" data-mode="base">Base Meshes</button>
+    <button class="top-btn" data-mode="customize">Customize</button>
+    <button class="top-btn" data-mode="clothes">Appearance</button>
+    <button class="top-btn" data-mode="materials">Materials</button>
+    <button class="top-btn" data-mode="animations">Animations</button>
+    <button class="top-btn" data-mode="randomizer">Random</button>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="top-section top-right top-actions">
+    <button class="top-btn" id="export-btn">Export</button>
+
+    <button class="top-btn credits-btn" id="credits-btn">
+      💎 <span class="credits-count">0</span>
+    </button>
+
+    <button class="top-btn user-btn" id="user-btn">
+      👤
+    </button>
+
+    <!-- DROPDOWNS -->
+    <div id="credits-menu" class="top-dropdown hidden">
+      <button class="dropdown-item open-plans">MemberShips</button>
+      <button class="dropdown-item open-credits">Buy Credits</button>
+    </div>
+
+    <div id="user-menu" class="top-dropdown hidden">
+      <button class="dropdown-item">Sign Up</button>
+      <button class="dropdown-item">Log In</button>
+    </div>
+  </div>
+
+</div>
+
+
+  <!-- ================= EXPORT MENU ================= -->
+
+<div id="export-menu">
+  <h4>Export Character</h4>
+
+  <button class="export-option" data-format="glb">Export GLB</button>
+  <button class="export-option" data-format="gltf">Export GLTF</button>
+
+  <p style="font-size:12px;color:#888;margin-top:10px;">
+    FBX export coming soon
+  </p>
+</div>
+
+
+  <!-- ================= LEFT PANELS ================= -->
+
+  <div id="basemesh-panel" class="panel">
+    <p style="color:#bbb;font-size:13px;">
+      Base mesh selection coming soon.
+    </p>
+  </div>
+
+  <div id="blendshape-panel" class="panel">
+    <!-- Blend shapes are injected by JS -->
+  </div>
+
+<div id="material-panel" class="panel">
+
+  <div class="material-section">
+    <label class="section-title">Material Target</label>
+    <div id="material-targets"></div>
+  </div>
+
+  <div class="material-section">
+    <label class="section-title">Base Color</label>
+    <input type="color" id="baseColorPicker" value="#e0e0e0">
+  </div>
+
+  <div class="material-section">
+    <label class="section-title">Texture Presets</label>
+    <div id="texture-grid"></div>
+  </div>
+<div class="material-section">
+  <button id="open-texture-painter" class="paint-btn">
+    🎨 Paint Texture
+  </button>
+</div>
+</div>
+
+<div id="clothes-panel" class="panel">
+  <h4 style="margin-top:0;color:#fff;font-size:14px;">Clothes</h4>
+
+<button class="clothes-category" data-category="shirt">Shirts</button>
+<button class="clothes-category" data-category="jacket">Jackets</button>
+<button class="clothes-category" data-category="pants">Pants</button>
+<button class="clothes-category" data-category="shoes">Shoes</button>
+<button class="clothes-category" data-category="gloves">Gloves</button>
+<button class="clothes-category" data-category="hair">Hair</button>
+<button class="clothes-category" data-category="facialHair">Facial Hair</button>
+<button class="clothes-category" data-category="headwear">Headwear</button>
+<button class="clothes-category" data-category="glasses">Glasses</button>
+<button class="clothes-category" data-category="accessories">Accessories</button>
+
+</div>
+<div id="animations-panel" class="panel">
+  <h4 style="margin-top:0;color:#fff;font-size:14px;">Animations</h4>
+  <div id="animations-list"></div>
+</div>
+<div id="randomizer-panel" class="panel">
+
+  <h3 class="rand-title">Randomizer</h3>
+
+  <div class="rand-options">
+    <label class="rand-toggle">
+      <input type="checkbox" data-rand="baseMesh" checked>
+      <span>Base Mesh</span>
+    </label>
+
+    <label class="rand-toggle">
+      <input type="checkbox" data-rand="clothes" checked>
+      <span>Clothes</span>
+    </label>
+
+    <label class="rand-toggle">
+      <input type="checkbox" data-rand="textures" checked>
+      <span>Textures</span>
+    </label>
+
+    <label class="rand-toggle">
+      <input type="checkbox" data-rand="colors" checked>
+      <span>Colors</span>
+    </label>
+
+    <label class="rand-toggle">
+      <input type="checkbox" data-rand="blendShapes" checked>
+      <span>Blend Shapes</span>
+    </label>
+
+    <label class="rand-toggle">
+      <input type="checkbox" data-rand="animation" checked>
+      <span>Animation</span>
+    </label>
+  </div>
+
+  <div class="rand-actions">
+    <button id="randomize-btn">🎲 Randomize</button>
+    <button id="reset-btn" disabled>♻ Reset</button>
+  </div>
+
+</div>
+
+
+<!-- RIGHT CLOTHING ITEMS PANEL -->
+<div id="clothes-items-panel" class="panel panel-right">
+  <h4 id="clothes-items-title">Select a category</h4>
+
+  <!-- IMPORTANT: this is what JS writes into -->
+  <div class="clothes-items-grid" id="clothes-items-grid"></div>
+</div>
+  <!-- ================= MAIN SCRIPT ================= -->
+<div id="viewport"></div>
+<!-- ================= TEXTURE PAINTER MODE ================= -->
+
+<div id="texture-painter-mode" class="hidden">
+
+  <!-- LEFT: 3D MODEL (20%) -->
+  <div id="painter-viewport">
+    <!-- we will reuse the SAME three.js renderer -->
+  </div>
+
+  <!-- RIGHT: PAINTER UI (80%) -->
+  <div id="painter-ui">
+
+    <!-- TOP BAR -->
+    <div class="painter-top-bar">
+      <button id="exit-painter">⬅ Back</button>
+      <span class="painter-title">Texture Painter</span>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="painter-content">
+
+      <!-- TEXTURE VIEW -->
+      <div class="painter-panel texture-view">
+        <h4>Texture View</h4>
+        <canvas id="texture-canvas"></canvas>
+      </div>
+
+      <!-- TOOLS -->
+      <div class="painter-panel tools-panel">
+        <h4>Tools</h4>
+
+        <button class="tool-btn" data-tool="move">Move</button>
+        <button class="tool-btn" data-tool="draw">Draw</button>
+        <button class="tool-btn" data-tool="erase">Erase</button>
+        <button class="tool-btn" data-tool="bucket">Bucket</button>
+
+        <div class="tool-subpanel">
+          <label>Color</label>
+          <input type="color" id="paint-color" value="#ffffff">
+
+          <label>Brush Size</label>
+          <input type="range" id="brush-size" min="1" max="50" value="10">
+
+        </div>
+  <!-- ✅ UV CONTROLS (NEW, SIMPLE) -->
+  <div class="tool-subpanel uv-panel">
+    <label>UV Overlay</label>
+
+    <div class="uv-controls">
+      <button id="toggle-uv" class="icon-btn active" title="Toggle UV">
+        👁️
+      </button>
+
+      <input
+        type="range"
+        id="uv-opacity"
+        min="0"
+        max="100"
+        value="25"
+      />
+    </div>
+  </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ================= PLANS & CREDITS OVERLAY ================= -->
+<div id="plans-overlay" class="overlay hidden">
+
+  <div class="overlay-backdrop"></div>
+
+  <div class="overlay-panel">
+
+    <!-- HEADER -->
+    <div class="overlay-header">
+      <h2>MemberShips & Credits</h2>
+      <button id="close-plans" class="icon-btn">✕</button>
+    </div>
+<div class="plans-visual">
+  <div class="visual-frame">
+    <video
+      class="character-preview"
+      src="videos/customization.mp4"
+      autoplay
+      muted
+      loop
+      playsinline
+    ></video>
+    <div class="visual-overlay"></div>
+
+  </div>
+</div>
+
+
+    <!-- TABS -->
+    <div class="overlay-tabs">
+      <button class="tab-btn active" data-tab="plans">MemberShip</button>
+      <button class="tab-btn" data-tab="credits">Buy Credits</button>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="overlay-content">
+
+      <!-- ================= SUBSCRIPTIONS ================= -->
+      <div class="tab-content active" id="tab-plans">
+<div class="billing-toggle">
+  <span class="billing-label active" data-billing="monthly">Monthly</span>
+  <div class="toggle-switch">
+    <div class="toggle-knob"></div>
+  </div>
+  <span class="billing-label" data-billing="yearly">
+    Yearly <em>-20%</em>
+  </span>
+</div>
+
+        <div class="plans-grid">
+
+          <!-- FREE -->
+          <div class="plan-card free">
+            <h3>FREE</h3>
+            <p class="price">$0</p>
+
+            <ul>
+              <li>Full editor access</li>
+              <li>Texture painting</li>
+              <li>Preview all content</li>
+              <li>1 Free export</li>
+            </ul>
+
+            <button class="plan-btn disabled">Current Plan</button>
+          </div>
+
+          <!-- PREMIUM -->
+          <div class="plan-card premium highlight">
+            <h3>PREMIUM</h3>
+            <p class="price">
+  <span class="price-monthly">$9.99 / month</span>
+  <span class="price-yearly">$95.99 / year</span>
+</p>
+
+
+            <ul>
+              <li>15 Credits / month</li>
+              <li>Credits roll over (3 months)</li>
+              <li>2048 textures</li>
+              <li>No watermark</li>
+              <li>All meshes & clothes</li>
+            </ul>
+
+            <button class="plan-btn">Subscribe</button>
+          </div>
+
+          <!-- STUDIO -->
+          <div class="plan-card studio">
+            <h3>STUDIO</h3>
+            <p class="price"><span class="price-monthly">$29.99 / month</span>
+<span class="price-yearly">$287.99 / year</span>
+</p>
+
+            <ul>
+              <li>50 Credits / month</li>
+              <li>Credits roll over (6 months)</li>
+              <li>4096 textures</li>
+              <li>Batch exports</li>
+              <li>Commercial license</li>
+            </ul>
+
+            <button class="plan-btn">Subscribe</button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ================= CREDIT PACKS ================= -->
+      <div class="tab-content" id="tab-credits">
+
+        <div class="credits-grid">
+
+          <div class="credit-pack">
+            <h3>5 Credits</h3>
+            <p class="price">$7.99</p>
+            <button class="plan-btn">Buy</button>
+          </div>
+
+          <div class="credit-pack">
+            <h3>10 Credits</h3>
+            <p class="price">$14.99</p>
+            <button class="plan-btn">Buy</button>
+          </div>
+
+          <div class="credit-pack">
+            <h3>25 Credits</h3>
+            <p class="price">$29.99</p>
+            <button class="plan-btn">Buy</button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<div id="toast" class="toast hidden"></div>
+  <script type="module" src="./main.js"></script>
+
+</body>
+</html>
