@@ -12,6 +12,71 @@
 <!-- Mobile / PWA -->
 <link rel="apple-touch-icon" href="images/morphara_icon.png">
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* Active clothing card */
+    .clothing-card.active,
+    .clothing-card-none.active {
+      border: 2px solid #6c63ff !important;
+      box-shadow: 0 0 8px rgba(108,99,255,0.4);
+    }
+
+    /* Active base mesh card */
+    .base-mesh-card.active {
+      border: 2px solid #6c63ff !important;
+      box-shadow: 0 0 8px rgba(108,99,255,0.4);
+    }
+
+    /* Active plan card highlight */
+    .plan-card.active-plan {
+      border: 2px solid #6c63ff !important;
+      position: relative;
+    }
+    .plan-card.active-plan::before {
+      content: "✓ Active";
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #6c63ff;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 20px;
+    }
+    .plan-card.active-plan .plan-btn.disabled {
+      background: #333;
+      color: #666;
+      cursor: not-allowed;
+    }
+    #plan-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 4px;
+      vertical-align: middle;
+      background: #444;
+      color: #fff;
+    }
+  
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.export-type-card:hover {
+  background: #333 !important;
+}
+
+.format-btn:hover {
+  background: #3a3a3a !important;
+}
+
+#final-export-btn:not(:disabled):hover {
+  background: #5a53df;
+}
+
+</style>
 
   <script type="importmap">
   {
@@ -23,6 +88,51 @@
 </head>
 
 <body class="app">
+ <!-- ================= AUTH OVERLAY ================= -->
+<div id="auth-overlay" class="overlay hidden">
+
+  <div class="overlay-backdrop"></div>
+
+  <div class="overlay-panel auth-panel">
+
+    <div class="overlay-header">
+      <h2 id="auth-title">Create Account</h2>
+      <button id="close-auth" class="icon-btn">✕</button>
+    </div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-auth="signup">Sign Up</button>
+      <button class="auth-tab" data-auth="login">Login</button>
+    </div>
+
+    <div class="auth-content">
+
+      <input type="email" id="auth-email" placeholder="Email" />
+      <input type="password" id="auth-password" placeholder="Password" />
+
+      <button id="auth-submit" class="auth-main-btn">
+        Create Account
+      </button>
+
+      <div class="auth-divider">
+        <span>OR</span>
+      </div>
+
+      <button id="google-auth" class="auth-oauth-btn">
+        Continue with Google
+      </button>
+
+      <button id="github-auth" class="auth-oauth-btn">
+        Continue with GitHub
+      </button>
+
+      <p id="auth-error" class="auth-error"></p>
+
+    </div>
+  </div>
+</div>
+
+
 <!-- ================= LAUNCH OVERLAY ================= -->
 <div id="launch-overlay" class="launch-overlay">
 
@@ -50,6 +160,7 @@
         <li>✔ Texture Painting</li>
         <li>✔ Animation System</li>
         <li>✔ GLB Export Ready</li>
+              <li style="color:#888;">✘ FBX Export (Premium+)</li>
       </ul>
 
       <h3>🚀 Roadmap</h3>
@@ -74,7 +185,7 @@
 
   <!-- LEFT -->
   <div class="top-section top-left">
-    <div class="app-brand">
+    <div class="app-brand" style="cursor:pointer;" onclick="window.location.href='index.html'">
   <img src="images/morphara_icon.png" class="app-icon" />
   <div class="app-title">
     Morphara
@@ -95,7 +206,7 @@
     <button class="top-btn" id="export-btn">Export</button>
 
     <button class="top-btn credits-btn" id="credits-btn">
-      💎 <span class="credits-count">0</span>
+      💎 <span class="credits-count" id="credits-count">0</span>
     </button>
 
     <button class="top-btn user-btn" id="user-btn">
@@ -119,15 +230,6 @@
 
   <!-- ================= EXPORT MENU ================= -->
 
-<div id="export-menu">
-  <h4>Export Character</h4>
-
-  <button class="export-option" data-format="glb">Export GLB</button>
-  <button class="export-option" data-format="gltf">Export GLTF</button>
-
-  <p style="font-size:12px;color:#888;margin-top:10px;">
-    FBX export coming soon
-  </p>
 </div>
 
 
@@ -401,6 +503,7 @@
 
             <ul>
               <li>50 Credits / month</li>
+              <li>✔ FBX Export (GLB/GLTF/FBX)</li>
               <li>Credits roll over (6 months)</li>
               <li>4096 textures</li>
               <li>Batch exports</li>
@@ -446,7 +549,75 @@
 
 
 <div id="toast" class="toast hidden"></div>
-  <script type="module" src="./main.js"></script>
+<script type="module" src="./main.js"></script>
+
+
+<!-- Randomizer Loading Overlay -->
+<div id="randomizer-loading" class="overlay hidden">
+  <div style="text-align:center;">
+    <div class="spinner" style="margin:0 auto 20px;"></div>
+    <h2 style="color:#fff;font-size:24px;margin:0 0 10px;">Creating Random Character...</h2>
+    <p style="color:#aaa;font-size:14px;">Please wait</p>
+  </div>
+</div>
+
+<!-- Export Panel Overlay -->
+<div id="export-panel-overlay" class="overlay hidden">
+  <div class="export-panel-content">
+    
+    <button id="export-panel-close" style="position:absolute;top:15px;right:15px;background:none;border:none;color:#999;font-size:28px;cursor:pointer;padding:0;width:30px;height:30px;line-height:1;">&times;</button>
+
+    <h2 style="color:#fff;margin:0 0 20px;font-size:24px;">Export Your Character</h2>
+
+    <div style="margin-bottom:30px;">
+      <div id="export-preview-container" style="width:400px;height:400px;border-radius:8px;background:#000;margin:0 auto;"></div>
+    </div>
+
+    <div style="margin-bottom:25px;">
+      <h3 style="color:#fff;font-size:16px;margin:0 0 12px;">What do you want to export?</h3>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
+        <div class="export-type-card" onclick="window.selectExportType('full')">
+          <div style="font-size:18px;margin-bottom:8px;">📦</div>
+          <h4 style="color:#fff;font-size:14px;margin:0 0 8px;">Full Character</h4>
+          <p style="color:#888;font-size:12px;margin:0 0 10px;">Model + Textures + Animations</p>
+          <p style="color:#6c63ff;font-size:13px;font-weight:600;margin:0;">
+            <span id="full-cost">1</span> Credit
+          </p>
+        </div>
+
+        <div class="export-type-card" onclick="window.selectExportType('animation')">
+          <div style="font-size:18px;margin-bottom:8px;">🎬</div>
+          <h4 style="color:#fff;font-size:14px;margin:0 0 8px;">Animation Only</h4>
+          <p style="color:#888;font-size:12px;margin:0 0 10px;">Skeleton + Animation data</p>
+          <p style="color:#0f0;font-size:13px;font-weight:600;margin:0;">FREE</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:25px;">
+      <h3 style="color:#fff;font-size:16px;margin:0 0 12px;">Choose Format</h3>
+      
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+        <button class="format-btn" data-format="glb" onclick="window.selectFormat('glb')">
+          GLB <span style="font-size:11px;color:#888;">(Binary)</span>
+        </button>
+        <button class="format-btn" data-format="gltf" onclick="window.selectFormat('gltf')">
+          GLTF <span style="font-size:11px;color:#888;">(JSON)</span>
+        </button>
+        <button class="format-btn" data-format="fbx" onclick="window.selectFormat('fbx')">
+          FBX <span style="font-size:11px;color:#888;">(Unity/Unreal/Godot)</span>
+        </button>
+      
+    <p style="color:#888;font-size:12px;margin-top:10px;text-align:center;">Note: FBX export requires Premium or Studio plan (coming in v0.1.1)</p></div>
+    </div>
+
+    <button id="final-export-btn" disabled style="width:100%;padding:15px;background:#6c63ff;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;transition:all 0.2s;opacity:0.5;cursor:not-allowed;">
+      Select options above
+    </button>
+
+  </div>
+</div>
 
 </body>
 </html>
