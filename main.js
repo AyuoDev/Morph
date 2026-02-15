@@ -2,15 +2,26 @@ import * as THREE from "three";
 import { GLTFLoader } from "https://unpkg.com/three@0.158.0/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "https://unpkg.com/three@0.158.0/examples/jsm/controls/OrbitControls.js";
 import { GLTFExporter } from "https://unpkg.com/three@0.158.0/examples/jsm/exporters/GLTFExporter.js";
-
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 import { initPlansOverlayControls } from "./js/Controls.js";
-import { BASE_MESHES } from "./data/baseMeshes.js";
-import { CLOTHES } from "./data/clothesData.js";
-import { TEXTURE_PRESETS } from "./data/textures.presets.js";
-import { ANIMATIONS } from "./data/animationsData.js";
 import { createPreview } from "./js/PreviewRenderer.js";
 import { TexturePainter } from "./js/TexturePainter.js";
+
+/* ---------------- WORKER & DATA CONFIG ---------------- */
+const WORKER_URL = "https://morphara.maroukayuob.workers.dev";
+
+// These are populated from Supabase on boot
+let BASE_MESHES = [];
+let CLOTHES     = [];
+let ANIMATIONS  = [];
+
+// Texture domains stay client-side (UI config, not assets)
+// compatible_mesh on a texture row = the domain key ("skin", "fabric", etc.)
+let TEXTURE_PRESETS = {};
+/* ---------------- STARTUP CLEANUP ---------------- */
+// Blob URLs are never cached — always fetched fresh from Worker
+
 /* ---------------- GLOBAL STATE ---------------- */
 
 let scene, camera, renderer, controls;
@@ -57,8 +68,277 @@ const randomizerConfig = {
   blendShapes: true,
   animation: true
 };
+  // Intitate Accounts
+const SUPABASE_URL = "https://yjrqcmzkmfawwsppmnkl.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_fIkpyaJmmkNhcB1HOeRrKw_xZ0c0miD";
 
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let loadedClothingMeshes = {};
+
+/* ---------------- Auth State ------------*/
+
+async function checkSession() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) {
+    updateUserMenu(session);
+    showToast("Welcome back 🎉");
+  }
+}
+
+checkSession();
+
+// Central function — handles BOTH logged-in and logged-out UI updates
+function updateUserMenu(session) {
+  const menu = document.getElementById("user-menu");
+  const userBtn = document.getElementById("user-btn");
+
+  if (session) {
+    const user = session.user;
+    const initial = (user.email?.[0] ?? "U").toUpperCase();
+
+    // Update the 👤 button to show user initial
+    userBtn.textContent = initial;
+    userBtn.title = user.email;
+
+    // Rebuild menu with user info + logout
+    menu.innerHTML = `
+      <span class="user-email">${user.email}</span>
+      <button class="dropdown-item" id="logout-btn">Log Out</button>
+    `;
+
+    document.getElementById("logout-btn").addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      // onAuthStateChange will fire and call updateUserMenu(null)
+    });
+
+    // Fetch or create credits
+    ensureUserCredits(user);
+
+  } else {
+    // Logged out state
+    userBtn.textContent = "👤";
+    userBtn.title = "";
+
+    menu.innerHTML = `
+      <button class="dropdown-item" data-auth-open="signup">Sign Up</button>
+      <button class="dropdown-item" data-auth-open="login">Log In</button>
+    `;
+
+    // Re-bind auth open buttons
+    menu.querySelectorAll("[data-auth-open]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        authMode = btn.dataset.authOpen;
+        updateAuthUI();
+        document.getElementById("auth-overlay").classList.remove("hidden");
+        menu.classList.add("hidden");
+      });
+    });
+
+    document.getElementById("credits-count").textContent = "0";
+  }
+}
+
+// Fetches credits + subscription plan
+async function ensureUserCredits(user) {
+  // Fetch credits
+  const { data, error } = await supabase
+    .from("users")
+    .select("credits")
+    .eq("id", user.id)
+    .single();
+
+  if (error) {
+    console.error("Error fetching credits:", error);
+  } else {
+    document.getElementById("credits-count").textContent = data.credits;
+  }
+
+  // Fetch active subscription
+  await fetchAndDisplayPlan(user.id);
+}
+
+// Expose globally so Controls.js can call it after Stripe return
+window.fetchAndDisplayPlan = fetchAndDisplayPlan;
+
+// Fetches the user current plan and updates UI
+async function fetchAndDisplayPlan(userId) {
+  let planName  = "free";
+  let planLabel = "FREE";
+
+  try {
+    // Use Worker /check-plan — reliable price ID matching via secrets
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      const res  = await fetch(`${WORKER_URL}/check-plan`, {
+        headers: { "Authorization": `Bearer ${session.access_token}` }
+      });
+      const data = await res.json();
+      planName  = data.plan || "free";
+      planLabel = planName.toUpperCase();
+    }
+  } catch(e) {
+    console.warn("fetchAndDisplayPlan failed:", e.message);
+  }
+
+  // Store globally so Controls.js can read it
+  window._currentPlan = planName;
+
+  // Update plan badge next to user button
+  let badge = document.getElementById("plan-badge");
+  if (!badge) {
+    badge = document.createElement("span");
+    badge.id = "plan-badge";
+    badge.style.cssText = "font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;margin-left:4px;vertical-align:middle;";
+    document.getElementById("user-btn")?.after(badge);
+  }
+
+  const badgeColors = { free: "#444", premium: "#6c63ff", studio: "#f59e0b" };
+  badge.textContent      = planLabel;
+  badge.style.background = badgeColors[planName] || "#444";
+  badge.style.color      = "#fff";
+
+  // Reset all plan cards first
+  document.querySelectorAll(".plan-card").forEach(card => {
+    card.classList.remove("active-plan");
+    const btn = card.querySelector(".plan-btn");
+    if (btn) {
+      btn.textContent = "Subscribe";
+      btn.disabled    = false;
+      btn.classList.remove("disabled");
+    }
+  });
+
+  // Free card always says "Current Plan" only if actually on free
+  const freeBtn = document.querySelector(".plan-card.free .plan-btn");
+  if (freeBtn) {
+    freeBtn.textContent = planName === "free" ? "Current Plan" : "Free";
+    freeBtn.disabled    = true; // free is always disabled (cant subscribe to free)
+  }
+
+  // Mark the actual active paid plan card
+  if (planName !== "free") {
+    const activeCard = document.querySelector(`.plan-card.${planName}`);
+    if (activeCard) {
+      activeCard.classList.add("active-plan");
+      const btn = activeCard.querySelector(".plan-btn");
+      if (btn) {
+        btn.textContent = "Current Plan";
+        btn.disabled    = true;
+        btn.classList.add("disabled");
+      }
+    }
+  }
+}
+
+/* ---------------- ASSET DATA LAYER ---------------- */
+
+// Fetches asset from Worker and returns a blob:// URL.
+// Always fetches as blob first — validates content-type BEFORE handing
+// to GLTFLoader. This is the only way to prevent the "Unexpected token <"
+// crash when Cloudflare or the Worker returns an HTML error page,
+// because GLTFLoader's onError is never called for 200-OK HTML responses.
+async function getAssetUrl(bucket, filename, mode = "public") {
+  let res;
+
+  if (mode === "private") {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error("Not authenticated");
+    res = await fetch(
+      `${WORKER_URL}/asset?bucket=${bucket}&file=${encodeURIComponent(filename)}`,
+      { headers: { "Authorization": `Bearer ${session.access_token}` } }
+    );
+  } else {
+    res = await fetch(
+      `${WORKER_URL}/public-asset?bucket=${bucket}&file=${encodeURIComponent(filename)}`
+    );
+  }
+
+  if (!res.ok) throw new Error(`Worker ${res.status} for ${filename}`);
+
+  // If Cloudflare returned an HTML error page (status 200 but wrong content)
+  // reject it NOW before GLTFLoader tries to parse it as JSON and crashes
+  const ct = res.headers.get("content-type") || "";
+  if (ct.includes("text/html")) {
+    throw new Error(`Got HTML instead of GLB for ${filename} — Cloudflare error page`);
+  }
+
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
+
+// Fetches all assets from Supabase and populates BASE_MESHES, CLOTHES,
+// ANIMATIONS, TEXTURE_PRESETS — then builds the UI
+async function loadAllAssets() {
+  const panel = document.getElementById("basemesh-panel");
+  panel.innerHTML = "<p style='color:#888;font-size:13px;padding:16px'>Loading assets...</p>";
+
+  try {
+    const { data: assets, error } = await supabase
+      .from("assets")
+      .select("id, name, type, r2_key, price_credits, compatible_mesh")
+      .order("name");
+
+    if (error) throw error;
+
+    // ── Base Meshes ──
+    BASE_MESHES = assets
+      .filter(a => a.type === "basemesh")
+      .map(a => ({
+        id:            a.id,
+        name:          a.name,
+        r2Key:         a.r2_key,
+        priceCredits:  a.price_credits ?? 1,
+        // path is resolved async via getAssetUrl — stored per-use
+      }));
+
+    // ── Clothing (all non-basemesh, non-texture, non-animation, non-uvmap) ──
+    const clothingTypes = ["shirts","pants","shoes","gloves","hair",
+                           "accessories","headwear","glasses","facialHair","jacket"];
+    CLOTHES = assets
+      .filter(a => clothingTypes.includes(a.type))
+      .map(a => ({
+        id:             a.id,
+        name:           a.name,
+        category:       a.type,       // type = bucket = category
+        baseMesh:       a.compatible_mesh,
+        r2Key:          a.r2_key,
+        materialDomain: "fabric",     // default; override per-item if needed
+        priceCredits:   a.price_credits ?? 0
+      }));
+
+    // ── Animations ──
+    ANIMATIONS = assets
+      .filter(a => a.type === "animation")
+      .map(a => ({
+        id:       a.id,
+        name:     a.name,
+        baseMesh: a.compatible_mesh,
+        r2Key:    a.r2_key,
+        loop:     true
+      }));
+
+    // ── Textures → grouped by domain (compatible_mesh = domain name) ──
+    const textureAssets = assets.filter(a => a.type === "textures");
+    TEXTURE_PRESETS = {};
+    for (const t of textureAssets) {
+      const domain = t.compatible_mesh || "fabric";
+      if (!TEXTURE_PRESETS[domain]) TEXTURE_PRESETS[domain] = [];
+      TEXTURE_PRESETS[domain].push({
+        id:     t.id,
+        label:  t.name,
+        r2Key:  t.r2_key,
+        map:    null // loaded on demand via getAssetUrl
+      });
+    }
+
+    // Build the UI now that data is ready
+    buildBaseMeshUI();
+
+  } catch (err) {
+    console.error("Failed to load assets:", err);
+    panel.innerHTML = "<p style='color:#e55;font-size:13px;padding:16px'>Failed to load assets. Please refresh.</p>";
+  }
+}
 
 /* ---------------- UI MODES ---------------- */
 
@@ -121,14 +401,17 @@ if(mode === "customize"){
 }
 
 /* ---------------- BOOT ---------------- */
+
 init();
-buildBaseMeshUI();
 setUIMode("base");
 initPlansOverlayControls();
+loadAllAssets(); // fetches from Supabase then builds UI
 
 /* ---------------- INIT ---------------- */
 
 function init() {
+
+  //
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x1e1e1e);
 
@@ -159,6 +442,11 @@ function buildBaseMeshUI() {
   const panel = document.getElementById("basemesh-panel");
   panel.innerHTML = "";
 
+  if (!BASE_MESHES.length) {
+    panel.innerHTML = "<p style='color:#888;font-size:13px;padding:16px'>No base meshes found.</p>";
+    return;
+  }
+
   BASE_MESHES.forEach(mesh => {
     const card = document.createElement("div");
     card.className = "base-mesh-card";
@@ -166,6 +454,7 @@ function buildBaseMeshUI() {
 
     const preview = document.createElement("div");
     preview.className = "preview-canvas";
+    preview.innerHTML = "<div style='color:#555;font-size:11px;text-align:center;padding-top:30px'>Loading...</div>";
 
     const name = document.createElement("div");
     name.className = "base-mesh-name";
@@ -174,15 +463,17 @@ function buildBaseMeshUI() {
     card.append(preview, name);
     panel.appendChild(card);
 
-    createPreview({
-      container: preview,
-      gltfPath: mesh.path
+    // Fetch blob URL for preview thumbnail only — never cache blob URLs
+    getAssetUrl("basemesh", mesh.r2Key).then(url => {
+      preview.innerHTML = "";
+      createPreview({ container: preview, gltfPath: url });
+    }).catch(() => {
+      preview.innerHTML = "<div style='color:#555;font-size:11px;text-align:center'>Preview unavailable</div>";
     });
 
     card.onclick = () => {
       document.querySelectorAll(".base-mesh-card")
         .forEach(c => c.classList.remove("active"));
-
       card.classList.add("active");
       loadBaseMesh(mesh);
       updateResetButton();
@@ -191,15 +482,38 @@ function buildBaseMeshUI() {
 }
 
 /* ---------------- LOAD BASE MESH ---------------- */
-function loadBaseMesh(meshData) {
+async function loadBaseMesh(meshData, onLoaded = null) {
   if (!meshData) return;
 
-  resetClothingUI();   // 🔑 ADD THIS
+  resetClothingUI();
   currentBaseMesh = meshData;
 
-  loader.load(meshData.path + "?" + Date.now(), gltf => {
-    onModelLoaded(gltf);
+  // Highlight active card
+  document.querySelectorAll(".base-mesh-card").forEach(c => {
+    c.classList.toggle("active", c.dataset.id === meshData.id);
   });
+
+  try {
+    const url = await getAssetUrl("basemesh", meshData.r2Key);
+    loader.load(
+      url,
+      gltf => {
+        onModelLoaded(gltf);
+        if (onLoaded) onLoaded(); // resolve promise for randomizer await
+      },
+      undefined,
+      err => {
+        console.error("Failed to load GLB:", err?.message || err);
+        showToast("Failed to load mesh — please try again");
+        currentBaseMesh = null;
+        if (onLoaded) onLoaded();
+      }
+    );
+  } catch (err) {
+    console.error("Failed to load base mesh:", err);
+    showToast("Failed to load mesh — please try again");
+    if (onLoaded) onLoaded();
+  }
 }
 function onModelLoaded(gltf) {
   cleanupPreviousModel();
@@ -399,7 +713,13 @@ label.className = "clothing-label";
 label.textContent = "None";
 noneCard.appendChild(label);
 
-noneCard.onclick = () => unequipClothing(category);
+noneCard.className = "clothing-card clothing-card-none";
+noneCard.onclick = () => {
+  panel.querySelectorAll(".clothing-card, .clothing-card-none")
+    .forEach(c => c.classList.remove("active"));
+  noneCard.classList.add("active");
+  unequipClothing(category);
+};
 panel.appendChild(noneCard);
 
 
@@ -408,29 +728,48 @@ panel.appendChild(noneCard);
   if (items.length === 0) return;
 
   items.forEach(item => {
-const card = document.createElement("div");
-card.className = "clothing-card";
+    const card = document.createElement("div");
+    card.className = "clothing-card";
 
-const preview = document.createElement("div");
-preview.className = "clothing-preview";
+    const preview = document.createElement("div");
+    preview.className = "clothing-preview";
+    preview.innerHTML = "<div style='color:#555;font-size:11px;text-align:center;padding-top:24px'>...</div>";
 
-createPreview({
-  container: preview,
-  gltfPath: item.path
-});
+    card.appendChild(preview);
 
-card.appendChild(preview);
+    const label = document.createElement("div");
+    label.className = "clothing-label";
+    label.textContent = item.name;
 
-const label = document.createElement("div");
-label.className = "clothing-label";
-label.textContent = item.name;
+    card.appendChild(label);
 
-card.appendChild(label);
+    // Fetch blob URL for thumbnail — never cache blob URLs
+    getAssetUrl(item.category, item.r2Key).then(url => {
+      preview.innerHTML = "";
+      createPreview({ container: preview, gltfPath: url });
+    }).catch(() => {
+      preview.innerHTML = "<div style='color:#555;font-size:11px;text-align:center'>N/A</div>";
+    });
 
-card.onclick = () => equipClothing(item);
-panel.appendChild(card);
-
+    card.dataset.itemId = item.id;
+    card.onclick = () => {
+      // Highlight this card, remove from others
+      panel.querySelectorAll(".clothing-card, .clothing-card-none")
+        .forEach(c => c.classList.remove("active"));
+      card.classList.add("active");
+      equipClothing(item);
+    };
+    panel.appendChild(card);
   });
+
+  // Highlight whichever card is currently equipped (or none)
+  const equipped = equippedClothes[category];
+  if (equipped) {
+    const activeCard = panel.querySelector(`[data-item-id="${equipped.id}"]`);
+    activeCard?.classList.add("active");
+  } else {
+    panel.querySelector(".clothing-card-none")?.classList.add("active");
+  }
 }
 async function equipClothing(item) {
   // Unequip existing
@@ -438,7 +777,23 @@ async function equipClothing(item) {
     unequipClothing(item.category);
   }
 
-  const gltf = await loader.loadAsync(item.path);
+  // Always get a fresh URL — presigned URLs expire in 60s
+  try {
+    item.path = await getAssetUrl(item.category, item.r2Key);
+  } catch (err) {
+    console.error("Failed to get clothing URL:", err);
+    showToast("Failed to load item — please try again");
+    return;
+  }
+
+  let gltf;
+  try {
+    gltf = await loader.loadAsync(item.path);
+  } catch(err) {
+    console.error("Failed to load clothing GLB:", err?.message || err);
+    showToast("Failed to load item — please try again");
+    return;
+  }
   const clothingRoot = gltf.scene;
 
   const characterSkinnedMesh = getFirstSkinnedMesh(currentModel);
@@ -585,68 +940,334 @@ function unequipAllClothes() {
 
 /* ---------------- EXPORT UI ---------------- */
 const exportBtn = document.getElementById("export-btn");
-const exportMenu = document.getElementById("export-menu");
-exportBtn.addEventListener("click", () => {
-  exportMenu.classList.toggle("active");
-});
-document.querySelectorAll(".export-option").forEach(btn => {
-  btn.addEventListener("click", () => {
-    const format = btn.dataset.format; // "glb" or "gltf"
-    exportCharacter(format);
-    exportMenu.classList.remove("active");
-  });
-});
-function exportCharacter(format = "glb") {
+
+if (exportBtn) {
+  exportBtn.addEventListener("click", async () => {
   if (!currentModel) {
-    alert("No character to export");
+    showToast("Load a character first!");
     return;
   }
 
-  const exporter = new GLTFExporter();
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    showToast("Sign in to export");
+    document.getElementById("auth-overlay").classList.remove("hidden");
+    return;
+  }
 
-  // Ensure morph values are baked
-  currentModel.traverse(obj => {
+  if (!currentBaseMesh) {
+    showToast("Select a base mesh first");
+    return;
+  }
+
+  document.getElementById("export-panel-overlay").classList.remove("hidden");
+  renderExportPreview();
+  });
+} else {
+  console.warn("Export button not found - check HTML");
+}
+
+function renderExportPreview() {
+  const container = document.getElementById("export-preview-container");
+  if (!container || !currentModel) return;
+  
+  // Clear previous preview
+  container.innerHTML = "";
+  
+  // Create dedicated preview scene
+  const previewScene = new THREE.Scene();
+  previewScene.background = new THREE.Color(0x1e1e1e);
+  
+  // Clone current model with all modifications
+  const modelClone = currentModel.clone(true);
+  
+  // Copy morph target influences
+  modelClone.traverse(obj => {
     if (obj.isSkinnedMesh && obj.morphTargetInfluences) {
-      obj.morphTargetInfluences = obj.morphTargetInfluences.map(v => v);
+      const original = currentModel.getObjectByProperty('uuid', obj.uuid);
+      if (original?.morphTargetInfluences) {
+        obj.morphTargetInfluences = [...original.morphTargetInfluences];
+      }
     }
   });
+  
+  previewScene.add(modelClone);
+  
+  // Add lights
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+  previewScene.add(ambientLight);
+  
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  dirLight.position.set(5, 10, 7.5);
+  previewScene.add(dirLight);
+  
+  const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
+  fillLight.position.set(-5, 0, -5);
+  previewScene.add(fillLight);
+  
+  // Camera
+  const previewCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+  
+  // Auto-frame model
+  const box = new THREE.Box3().setFromObject(modelClone);
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z);
+  
+  previewCamera.position.set(
+    center.x,
+    center.y + maxDim * 0.3,
+    center.z + maxDim * 2
+  );
+  previewCamera.lookAt(center);
+  
+  // Renderer
+  const previewRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  previewRenderer.setSize(400, 400);
+  previewRenderer.setPixelRatio(window.devicePixelRatio);
+  container.appendChild(previewRenderer.domElement);
+  
+  // Animate preview
+  let animFrameId;
+  function animatePreview() {
+    animFrameId = requestAnimationFrame(animatePreview);
+    modelClone.rotation.y += 0.005;
+    previewRenderer.render(previewScene, previewCamera);
+  }
+  animatePreview();
+  
+  // Store cleanup function
+  container._cleanup = () => {
+    if (animFrameId) cancelAnimationFrame(animFrameId);
+    previewRenderer.dispose();
+    previewScene.traverse(obj => {
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) {
+        if (Array.isArray(obj.material)) {
+          obj.material.forEach(m => m.dispose());
+        } else {
+          obj.material.dispose();
+        }
+      }
+    });
+  };
+}
 
-const options = {
-  binary: format === "glb",
-  trs: false,
-  onlyVisible: true,
-  embedImages: true,
-  includeCustomExtensions: true,
-  animations: activeAction ? [activeAction.getClip()] : []
-};
+document.getElementById("export-panel-close")?.addEventListener("click", () => {
+  const container = document.getElementById("export-preview-container");
+  if (container?._cleanup) {
+    container._cleanup();
+  }
+  document.getElementById("export-panel-overlay").classList.add("hidden");
+});
 
+async function handleExport(type, format) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return;
 
-  exporter.parse(
-    currentModel,
-    result => {
-      let blob;
-      let filename = `morphara_${currentBaseMesh?.id || "character"}.${format}`;
+  const currentCredits = parseInt(document.getElementById("credits-count").textContent, 10) || 0;
+  
+  let cost = 0;
+  let exportName = "";
 
-      if (format === "glb") {
-        blob = new Blob([result], {
-          type: "model/gltf-binary"
-        });
-      } else {
-        // GLTF with embedded base64 textures
-        blob = new Blob(
-          [JSON.stringify(result, null, 2)],
-          { type: "application/json" }
-        );
+  if (type === "full") {
+    cost = currentBaseMesh.priceCredits || 1;
+    exportName = "Full Character";
+  } else if (type === "animation") {
+    cost = 0;
+    exportName = "Animation Only";
+  }
+
+  if (cost > 0 && currentCredits < cost) {
+    showToast(`Need ${cost} credit(s) — you have ${currentCredits}`);
+    document.getElementById("export-panel-overlay").classList.add("hidden");
+    document.getElementById("plans-overlay").classList.remove("hidden");
+    const creditsTab = document.querySelector(".tab-btn[data-tab='credits']");
+    creditsTab?.click();
+    return;
+  }
+
+  const overlay = document.getElementById("export-panel-overlay");
+  overlay.querySelector(".export-panel-content").style.opacity = "0.5";
+  overlay.querySelector(".export-panel-content").style.pointerEvents = "none";
+
+  try {
+    if (cost > 0) {
+      const configuration = {
+        baseMesh: currentBaseMesh?.id,
+        baseMeshName: currentBaseMesh?.name,
+        format,
+        exportType: type,
+        equippedClothes: Object.fromEntries(
+          Object.entries(equippedClothes).filter(([, v]) => v).map(([k, v]) => [k, v.id ?? v.name])
+        ),
+        blendShapes: { ...morphValues }
+      };
+
+      const { data, error } = await supabase.rpc("use_export_credit", {
+        p_user_id: session.user.id,
+        p_asset_id: currentBaseMesh.id,
+        p_format: format,
+        p_configuration: configuration
+      });
+
+      if (error) throw error;
+
+      if (!data.success) {
+        showToast(data.error ?? "Export failed");
+        return;
       }
 
-      downloadBlob(blob, filename);
-    },
-    error => {
-      console.error("Export error:", error);
-    },
-    options
-  );
+      document.getElementById("credits-count").textContent = data.credits_remaining;
+    }
+
+    if (type === "full") {
+      await exportFullCharacter(format);
+    } else if (type === "animation") {
+      await exportAnimationOnly(format);
+    }
+
+    showToast(`${exportName} exported as ${format.toUpperCase()}!`);
+    overlay.classList.add("hidden");
+
+  } catch (err) {
+    console.error("Export error:", err);
+    showToast("Export failed — check console");
+  } finally {
+    overlay.querySelector(".export-panel-content").style.opacity = "1";
+    overlay.querySelector(".export-panel-content").style.pointerEvents = "auto";
+  }
 }
+window.handleExport = handleExport;
+
+
+async function exportFullCharacter(format) {
+  if (format === "fbx") {
+    await exportAsFBX();
+  } else {
+    await exportAsGLTF(format, true);
+  }
+}
+
+async function exportAnimationOnly(format) {
+  if (format === "fbx") {
+    await exportAnimationAsFBX();
+  } else {
+    await exportAnimationAsGLTF(format);
+  }
+}
+
+function exportAsGLTF(format, includeModel = true) {
+  return new Promise((resolve, reject) => {
+    const exporter = new GLTFExporter();
+
+    currentModel.traverse(obj => {
+      if (obj.isSkinnedMesh && obj.morphTargetInfluences) {
+        obj.morphTargetInfluences = obj.morphTargetInfluences.map(v => v);
+      }
+    });
+
+    const options = {
+      binary: format === "glb",
+      trs: false,
+      onlyVisible: true,
+      embedImages: true,
+      includeCustomExtensions: true,
+      animations: activeAction ? [activeAction.getClip()] : []
+    };
+
+    exporter.parse(
+      currentModel,
+      result => {
+        try {
+          let blob;
+          const filename = `morphara_${currentBaseMesh?.id || "character"}.${format}`;
+
+          if (format === "glb") {
+            blob = new Blob([result], { type: "model/gltf-binary" });
+          } else {
+            blob = new Blob([JSON.stringify(result, null, 2)], { type: "application/json" });
+          }
+
+          downloadBlob(blob, filename);
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
+      },
+      error => {
+        console.error("GLTF export error:", error);
+        showToast("Export failed");
+        reject(error);
+      },
+      options
+    );
+  });
+}
+
+function exportAnimationAsGLTF(format) {
+  return new Promise((resolve, reject) => {
+    if (!activeAction) {
+      showToast("No animation loaded");
+      reject(new Error("No animation"));
+      return;
+    }
+
+    const exporter = new GLTFExporter();
+    
+    const skeletonRoot = new THREE.Group();
+    const firstMesh = currentModel.children.find(c => c.isSkinnedMesh);
+    if (firstMesh?.skeleton) {
+      skeletonRoot.add(firstMesh.skeleton.bones[0].clone(true));
+    }
+
+    const options = {
+      binary: format === "glb",
+      trs: false,
+      animations: [activeAction.getClip()]
+    };
+
+    exporter.parse(
+      skeletonRoot,
+      result => {
+        try {
+          const filename = `morphara_animation_${Date.now()}.${format}`;
+          let blob;
+
+          if (format === "glb") {
+            blob = new Blob([result], { type: "model/gltf-binary" });
+          } else {
+            blob = new Blob([JSON.stringify(result, null, 2)], { type: "application/json" });
+          }
+
+          downloadBlob(blob, filename);
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
+      },
+      error => {
+        console.error("Animation export error:", error);
+        showToast("Animation export failed");
+        reject(error);
+      },
+      options
+    );
+  });
+}
+
+async function exportAsFBX() {
+  // FBX export feature - Coming in v0.1.1
+  showToast("FBX export available in Premium & Studio plans (coming in v0.1.1)");
+  return Promise.resolve();
+}
+
+async function exportAnimationAsFBX() {
+  // FBX animation export - Coming in v0.1.1
+  showToast("FBX export available in Premium & Studio plans (coming in v0.1.1)");
+  return Promise.resolve();
+}
+
 function downloadBlob(blob, filename) {
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
@@ -656,6 +1277,66 @@ function downloadBlob(blob, filename) {
   document.body.removeChild(link);
   URL.revokeObjectURL(link.href);
 }
+
+// ============================================================
+// EXPORT PANEL STATE & HANDLERS
+// ============================================================
+let selectedExportType = null;
+let selectedFormat = null;
+
+window.selectExportType = function(type) {
+  selectedExportType = type;
+  document.querySelectorAll('.export-type-card').forEach(card => {
+    card.style.borderColor = 'transparent';
+  });
+  event.currentTarget.style.borderColor = '#6c63ff';
+  const cost = type === 'full' ? (currentBaseMesh?.priceCredits || 1) : 0;
+  document.getElementById('full-cost').textContent = cost;
+  updateExportButton();
+};
+
+window.selectFormat = function(format) {
+  // Check if FBX requires premium/studio
+  if (format === 'fbx') {
+    // TODO: Add plan check when FBX is implemented in v0.1.1
+    // For now, just show coming soon message
+    showToast("FBX export coming in v0.1.1 - Premium & Studio feature");
+    return;
+  }
+  
+  selectedFormat = format;
+  document.querySelectorAll('.format-btn').forEach(btn => {
+    btn.style.borderColor = 'transparent';
+    btn.style.background = '#2a2a2a';
+  });
+  event.currentTarget.style.borderColor = '#6c63ff';
+  event.currentTarget.style.background = '#3a3a3a';
+  updateExportButton();
+};
+
+function updateExportButton() {
+  const btn = document.getElementById('final-export-btn');
+  if (!btn) return;
+  
+  if (selectedExportType && selectedFormat) {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+    const typeLabel = selectedExportType === 'full' ? 'Full Character' : 'Animation Only';
+    const formatLabel = selectedFormat.toUpperCase();
+    const cost = selectedExportType === 'full' ? (currentBaseMesh?.priceCredits || 1) : 0;
+    const costText = cost > 0 ? ` (${cost} Credit${cost > 1 ? 's' : ''})` : ' (FREE)';
+    btn.textContent = `Export ${typeLabel} as ${formatLabel}${costText}`;
+    btn.onclick = () => handleExport(selectedExportType, selectedFormat);
+  } else {
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+    btn.style.cursor = 'not-allowed';
+    btn.textContent = 'Select options above';
+    btn.onclick = null;
+  }
+}
+
 /* ---------------- LOOP ---------------- */
 function animate() {
   requestAnimationFrame(animate);
@@ -672,11 +1353,21 @@ const textureLoader = new THREE.TextureLoader();
 const baseColorPicker = document.getElementById("baseColorPicker");
 const textureGrid = document.getElementById("texture-grid");
 const materialTargetsContainer = document.getElementById("material-targets");
-function applyTexturePreset(preset) {
+async function applyTexturePreset(preset) {
   const target = materialTargets[activeMaterialTarget];
   if (!target) return;
 
   target.materialState.texture = preset;
+
+  // Always fetch fresh — never use cached blob URL (they die on refresh)
+  let mapUrl = null;
+  if (preset.r2Key) {
+    try {
+      mapUrl = await getAssetUrl("textures", preset.r2Key);
+    } catch (err) {
+      console.error("Failed to load texture URL:", err);
+    }
+  }
 
   target.meshes.forEach(mesh => {
     const mats = Array.isArray(mesh.material)
@@ -686,26 +1377,16 @@ function applyTexturePreset(preset) {
     mats.forEach(mat => {
       if (!mat) return;
 
-      // Base color / map
-      if (preset.map) {
-        mat.map = textureLoader.load(preset.map);
+      if (mapUrl) {
+        mat.map = textureLoader.load(mapUrl);
         mat.map.colorSpace = THREE.SRGBColorSpace;
       } else {
         mat.map = null;
       }
 
-      // Optional PBR extras (future-safe)
-      if (preset.normal) {
-        mat.normalMap = textureLoader.load(preset.normal);
-      }
-
-      if (preset.roughness !== undefined) {
-        mat.roughness = preset.roughness;
-      }
-
-      if (preset.metalness !== undefined) {
-        mat.metalness = preset.metalness;
-      }
+      if (preset.normal) mat.normalMap = textureLoader.load(preset.normal);
+      if (preset.roughness !== undefined) mat.roughness = preset.roughness;
+      if (preset.metalness !== undefined) mat.metalness = preset.metalness;
 
       mat.needsUpdate = true;
     });
@@ -756,14 +1437,22 @@ function rebuildMaterialTargetsUI() {
 function rebuildMaterialTargets() {
   materialTargets = {};
 
-  // Base mesh → skin
+  // Base mesh → skin — read ACTUAL current color from mesh material
   if (baseSkinnedMeshes.length) {
+    // Get real current color from the mesh, not a hardcoded white
+    let currentColor = new THREE.Color("#ffffff");
+    const firstMesh = baseSkinnedMeshes[0];
+    if (firstMesh?.material) {
+      const mat = Array.isArray(firstMesh.material) ? firstMesh.material[0] : firstMesh.material;
+      if (mat?.color) currentColor = mat.color.clone();
+    }
+
     materialTargets.base = {
       label: "Skin",
       meshes: baseSkinnedMeshes,
       domain: "skin",
       materialState: {
-        color: new THREE.Color("#ffffff"),
+        color: currentColor,
         texture: null
       }
     };
@@ -820,15 +1509,22 @@ function buildTextureGrid() {
     const item = document.createElement("div");
     item.className = "texture-item";
     item.title = preset.label;
+    item.innerText = preset.label;
 
+    // Load thumbnail if we have a cached URL
     if (preset.map) {
       item.style.backgroundImage = `url(${preset.map})`;
-    } else {
-      item.innerText = "Flat";
+      item.innerText = "";
+    } else if (preset.r2Key) {
+      // Fetch URL and apply as background
+      getAssetUrl("textures", preset.r2Key).then(url => {
+        // Don't cache on preset.map — blob URLs die on refresh
+        item.style.backgroundImage = `url(${url})`;
+        item.innerText = "";
+      }).catch(() => {});
     }
 
     item.onclick = () => applyTexturePreset(preset);
-
     textureGrid.appendChild(item);
   });
 }
@@ -840,7 +1536,18 @@ document.querySelectorAll('[data-rand]').forEach(input => {
   });
 });
 document.getElementById('randomize-btn')
-  .addEventListener('click', randomizeCharacter);
+  .addEventListener('click', () => {
+    const overlay = document.getElementById('randomizer-loading');
+    if (overlay) {
+      overlay.classList.remove('hidden');
+      setTimeout(async () => {
+        await randomizeCharacter();
+        overlay.classList.add('hidden');
+      }, 50);
+    } else {
+      randomizeCharacter();
+    }
+  });
 
 document.getElementById('reset-btn')
   .addEventListener('click', resetCharacter);
@@ -850,17 +1557,42 @@ function updateResetButton() {
   if (!resetBtn) return;
   resetBtn.disabled = !currentBaseMesh;
 }
-function randomizeCharacter() {
+async function randomizeCharacter() {
 
   /* ---------- BASE MESH ---------- */
-  if (randomizerConfig.baseMesh) {
-    const mesh =
-      BASE_MESHES[Math.floor(Math.random() * BASE_MESHES.length)];
-    loadBaseMesh(mesh);
-    return; // wait for model to load, next click continues
+  // If baseMesh is checked, load a random mesh and WAIT for it to finish
+  // before randomizing everything else — no more early return
+  if (randomizerConfig.baseMesh && BASE_MESHES.length) {
+    const mesh = BASE_MESHES[Math.floor(Math.random() * BASE_MESHES.length)];
+    // Wait for the model to fully load before continuing
+    await new Promise(resolve => {
+      loadBaseMesh(mesh, resolve); // resolve called inside onModelLoaded
+    });
   }
 
   if (!currentBaseMesh) return;
+
+  /* ---------- BASE COLOR ---------- */
+  if (randomizerConfig.colors) {
+    // Randomize base mesh skin color
+    const baseTarget = materialTargets["base"];
+    if (baseTarget) {
+      const randColor = new THREE.Color().setHSL(
+        Math.random(),
+        0.3 + Math.random() * 0.4,
+        0.4 + Math.random() * 0.3
+      );
+      baseTarget.materialState.color.copy(randColor);
+      baseTarget.meshes.forEach(mesh => {
+        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        mats.forEach(mat => mat?.color?.copy(randColor));
+      });
+      // Sync color picker if base is active target
+      if (activeMaterialTarget === "base") {
+        baseColorPicker.value = `#${randColor.getHexString()}`;
+      }
+    }
+  }
 
   /* ---------- CLOTHES ---------- */
   if (randomizerConfig.clothes) {
@@ -868,60 +1600,68 @@ function randomizeCharacter() {
 
     const categories = [...new Set(CLOTHES.map(c => c.category))];
 
-    categories.forEach(category => {
-      if (Math.random() > 0.5) return;
+    for (const category of categories) {
+      if (Math.random() > 0.5) continue;
 
       const items = CLOTHES.filter(
         c => c.baseMesh === currentBaseMesh.id &&
              c.category === category
       );
 
-      if (!items.length) return;
+      if (!items.length) continue;
 
       const item = items[Math.floor(Math.random() * items.length)];
-      equipClothing(item);
-    });
+      await equipClothing(item);
+    }
   }
 
   /* ---------- BLEND SHAPES ---------- */
-  if (randomizerConfig.blendShapes) {
+  if (randomizerConfig.blendShapes && Object.keys(morphValues).length > 0) {
     Object.keys(morphValues).forEach(key => {
       morphValues[key] = Math.random() * 0.6;
     });
+    // Morphs are applied every frame via applyMorphsPerFrame() in animate()
   }
 
-  /* ---------- MATERIALS ---------- */
+  /* ---------- CLOTHING MATERIAL COLORS ---------- */
   Object.entries(materialTargets).forEach(([key, target]) => {
+    if (key === "base") return; // already handled above
     activeMaterialTarget = key;
 
     if (randomizerConfig.colors) {
-      target.materialState.color.setHSL(
+      const randColor = new THREE.Color().setHSL(
         Math.random(),
         0.4 + Math.random() * 0.3,
         0.4 + Math.random() * 0.3
       );
+      target.materialState.color.copy(randColor);
+      target.meshes.forEach(mesh => {
+        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        mats.forEach(mat => mat?.color?.copy(randColor));
+      });
     }
 
     if (randomizerConfig.textures) {
       const presets = TEXTURE_PRESETS[target.domain];
       if (presets?.length) {
-        const preset =
-          presets[Math.floor(Math.random() * presets.length)];
+        const preset = presets[Math.floor(Math.random() * presets.length)];
         applyTexturePreset(preset);
       }
     }
   });
+
+  // Restore activeMaterialTarget to base and sync UI
+  activeMaterialTarget = Object.keys(materialTargets)[0] || "base";
+  syncMaterialUI();
+  rebuildMaterialTargetsUI();
 
   /* ---------- ANIMATION ---------- */
   if (randomizerConfig.animation) {
     const anims = ANIMATIONS.filter(
       a => a.baseMesh === currentBaseMesh.id
     );
-
     if (anims.length) {
-      loadAnimation(
-        anims[Math.floor(Math.random() * anims.length)]
-      );
+      loadAnimation(anims[Math.floor(Math.random() * anims.length)]);
     }
   }
 }
@@ -977,6 +1717,7 @@ function buildAnimationUI() {
 
     const preview = document.createElement("div");
     preview.className = "preview-canvas";
+    preview.innerHTML = "<div style='color:#555;font-size:11px;text-align:center;padding-top:30px'>...</div>";
 
     const label = document.createElement("div");
     label.className = "base-mesh-name";
@@ -985,13 +1726,22 @@ function buildAnimationUI() {
     card.append(preview, label);
     animationsList.appendChild(card);
 
-createPreview({
-  container: preview,
-  animationPath: anim.path,
-  baseMeshId: anim.baseMesh,
-  autoRotate: false
-});
-
+    // Fetch animation URL + base mesh URL for preview
+    // Fetch blob URLs for thumbnail — never cache blob URLs
+    Promise.all([
+      getAssetUrl("animation", anim.r2Key),
+      currentBaseMesh ? getAssetUrl("basemesh", currentBaseMesh.r2Key) : Promise.resolve(null)
+    ]).then(([animUrl, baseMeshUrl]) => {
+      preview.innerHTML = "";
+      createPreview({
+        container: preview,
+        animationPath: animUrl,
+        baseMeshPath: baseMeshUrl,
+        autoRotate: false
+      });
+    }).catch(() => {
+      preview.innerHTML = "<div style='color:#555;font-size:11px;text-align:center'>N/A</div>";
+    });
 
     card.onclick = () => loadAnimation(anim);
   });
@@ -999,6 +1749,14 @@ createPreview({
 
 async function loadAnimation(animData) {
   if (!currentModel) return;
+
+  try {
+    animData.path = await getAssetUrl("animation", animData.r2Key);
+  } catch (err) {
+    console.error("Failed to get animation URL:", err);
+    showToast("Failed to load animation");
+    return;
+  }
 
   const gltf = await loader.loadAsync(animData.path);
   if (!gltf.animations.length) return;
@@ -1311,17 +2069,16 @@ uiCanvas.onpointermove = e => {
 
 uvOverlayImage = null;
 
-const uvPath = getUVMapForActiveTarget();
-if (uvPath) {
-const img = new Image();
-img.crossOrigin = "anonymous";
-img.src = uvPath + "?v=" + Date.now();
-img.onload = () => {
-  uvOverlayImage = img;
-  updateTextureView();
-};
-
-}
+getUVMapForActiveTarget().then(uvPath => {
+  if (!uvPath) return;
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.src = uvPath;
+  img.onload = () => {
+    uvOverlayImage = img;
+    updateTextureView();
+  };
+});
   showUVOverlay = true;
   toggleUVBtn.classList.toggle("active", showUVOverlay);
   uvOpacitySlider.value = uvOpacity ;
@@ -1503,22 +2260,25 @@ function showToast(message, duration = 1500) {
   }, duration);
 }
 /* ------------------ UV MAPS ---------- */
-function getUVMapForActiveTarget() {
-  // Clothes UV
-  const clothing = CLOTHES.find(c => c.id === activeMaterialTarget);
-  if (clothing?.uvMap) {
-    return clothing.uvMap;
-  }
+// UV maps are stored in the uvmaps bucket with compatible_mesh = baseMesh id
+async function getUVMapForActiveTarget() {
+  // Try to find a uvmap asset for the current base mesh
+  if (!currentBaseMesh?.id) return null;
 
-  // Base mesh UV
-  if (currentBaseMesh?.id) {
-    const base = BASE_MESHES.find(b => b.id === currentBaseMesh.id);
-    if (base?.uvMap) {
-      return base.uvMap;
-    }
-  }
+  try {
+    const { data, error } = await supabase
+      .from("assets")
+      .select("r2_key")
+      .eq("type", "uvmaps")
+      .eq("compatible_mesh", currentBaseMesh.id)
+      .limit(1)
+      .single();
 
-  return null;
+    if (error || !data) return null;
+    return await getAssetUrl("uvmaps", data.r2_key);
+  } catch {
+    return null;
+  }
 }
 
 const toggleUVBtn = document.getElementById("toggle-uv");
@@ -1597,3 +2357,106 @@ if (launchOverlay && closeLaunch) {
     });
   }
 }
+// ================= AUTH UI =================
+
+const authOverlay = document.getElementById("auth-overlay");
+const closeAuthBtn = document.getElementById("close-auth");
+
+const authTabs = document.querySelectorAll(".auth-tab");
+const authSubmit = document.getElementById("auth-submit");
+const authTitle = document.getElementById("auth-title");
+const authError = document.getElementById("auth-error");
+
+let authMode = "signup"; // default
+
+// Auth open buttons are dynamically bound inside updateUserMenu()
+
+// Close overlay
+closeAuthBtn.addEventListener("click", () => {
+  authOverlay.classList.add("hidden");
+});
+
+// Switch tabs
+authTabs.forEach(tab => {
+  tab.addEventListener("click", () => {
+    authMode = tab.dataset.auth;
+    updateAuthUI();
+  });
+});
+
+function updateAuthUI() {
+  authTabs.forEach(t => t.classList.remove("active"));
+  document.querySelector(`[data-auth="${authMode}"]`).classList.add("active");
+
+  authTitle.textContent =
+    authMode === "signup" ? "Create Account" : "Login";
+
+  authSubmit.textContent =
+    authMode === "signup" ? "Create Account" : "Login";
+}
+
+// ================= EMAIL AUTH =================
+
+
+authSubmit.addEventListener("click", async () => {
+  const email = document.getElementById("auth-email").value.trim();
+  const password = document.getElementById("auth-password").value;
+
+  authError.textContent = "";
+
+  if (!email || !password) {
+    authError.textContent = "Please enter your email and password.";
+    return;
+  }
+
+  try {
+    if (authMode === "signup") {
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) throw error;
+
+      // Supabase may require email confirmation — session may be null
+      if (!data.session) {
+        authError.style.color = "#4caf50";
+        authError.textContent = "Check your email to confirm your account!";
+        return;
+      }
+
+      // onAuthStateChange will fire and call updateUserMenu automatically
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      // onAuthStateChange will handle the rest
+    }
+
+    document.getElementById("auth-overlay").classList.add("hidden");
+    showToast("Welcome to Morphara 🎉");
+
+  } catch (err) {
+    authError.style.color = "";
+    authError.textContent = err.message;
+  }
+});
+
+// ================= OAUTH =================
+
+document.getElementById("google-auth").addEventListener("click", async () => {
+  await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: window.location.origin
+    }
+  });
+});
+
+
+document.getElementById("github-auth").addEventListener("click", async () => {
+  await supabase.auth.signInWithOAuth({
+    provider: "github",
+    options: {
+      redirectTo: window.location.origin
+    }
+  });
+});
+supabase.auth.onAuthStateChange((event, session) => {
+  updateUserMenu(session ?? null);
+});
