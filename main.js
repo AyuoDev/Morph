@@ -275,7 +275,7 @@ async function loadAllAssets() {
   try {
     const { data: assets, error } = await supabase
       .from("assets")
-      .select("id, name, type, r2_key, price_credits, compatible_mesh")
+      .select("id, name, type, r2_key, price_credits, compatible_mesh, uv_map")
       .order("name");
 
     if (error) throw error;
@@ -288,6 +288,7 @@ async function loadAllAssets() {
         name:          a.name,
         r2Key:         a.r2_key,
         priceCredits:  a.price_credits ?? 1,
+        uv_map:        a.uv_map,  // UV map filename for texture painter
         // path is resolved async via getAssetUrl — stored per-use
       }));
 
@@ -2262,21 +2263,20 @@ function showToast(message, duration = 1500) {
 /* ------------------ UV MAPS ---------- */
 // UV maps are stored in the uvmaps bucket with compatible_mesh = baseMesh id
 async function getUVMapForActiveTarget() {
-  // Try to find a uvmap asset for the current base mesh
-  if (!currentBaseMesh?.id) return null;
+  // Get UV map directly from currentBaseMesh.uv_map column
+  if (!currentBaseMesh?.uv_map) {
+    console.warn('No UV map defined for base mesh:', currentBaseMesh?.id);
+    return null;
+  }
 
   try {
-    const { data, error } = await supabase
-      .from("assets")
-      .select("r2_key")
-      .eq("type", "uvmaps")
-      .eq("compatible_mesh", currentBaseMesh.id)
-      .limit(1)
-      .single();
-
-    if (error || !data) return null;
-    return await getAssetUrl("uvmaps", data.r2_key);
-  } catch {
+    // currentBaseMesh.uv_map = "lowpoly.png"
+    // Fetch from uvmaps bucket
+    const uvMapUrl = await getAssetUrl("uvmaps", currentBaseMesh.uv_map, "public");
+    console.log('✓ Loaded UV map:', currentBaseMesh.uv_map);
+    return uvMapUrl;
+  } catch (err) {
+    console.error('✗ Failed to load UV map:', err);
     return null;
   }
 }
@@ -2460,4 +2460,3 @@ document.getElementById("github-auth").addEventListener("click", async () => {
 supabase.auth.onAuthStateChange((event, session) => {
   updateUserMenu(session ?? null);
 });
-
