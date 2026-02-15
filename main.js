@@ -304,7 +304,8 @@ async function loadAllAssets() {
         baseMesh:       a.compatible_mesh,
         r2Key:          a.r2_key,
         materialDomain: "fabric",     // default; override per-item if needed
-        priceCredits:   a.price_credits ?? 0
+        priceCredits:   a.price_credits ?? 0,
+        uv_map:         a.uv_map       // UV map filename for texture painter
       }));
 
     // ── Animations ──
@@ -828,7 +829,8 @@ Object.entries(morphValues).forEach(([name, value]) => {
   equippedClothes[item.category] = item.id;
   loadedClothingMeshes[item.id] = {
   root: clothingRoot,
-  materialDomain: item.materialDomain || "fabric"
+  materialDomain: item.materialDomain || "fabric",
+  clothing: item  // Store clothing reference for UV map access
 };
 }
 function getFirstSkinnedMesh(root) {
@@ -1471,6 +1473,7 @@ Object.entries(loadedClothingMeshes).forEach(([id, data]) => {
     label: id,
     meshes,
     domain: materialDomain || "fabric", // 🔑 NOW DYNAMIC
+    clothing: data.clothing,  // Reference to clothing object (has uv_map)
     materialState: {
       color: new THREE.Color("#ffffff"),
       texture: null
@@ -2263,20 +2266,34 @@ function showToast(message, duration = 1500) {
 /* ------------------ UV MAPS ---------- */
 // UV maps are stored in the uvmaps bucket with compatible_mesh = baseMesh id
 async function getUVMapForActiveTarget() {
-  // Get UV map directly from currentBaseMesh.uv_map column
-  if (!currentBaseMesh?.uv_map) {
-    console.warn('No UV map defined for base mesh:', currentBaseMesh?.id);
+  // Determine which asset we're painting (shirt, pants, or base mesh)
+  let targetAsset = null;
+  let assetType = "base mesh";
+  
+  // Check if we're editing a clothing item
+  const target = materialTargets[activeMaterialTarget];
+  if (target && target.clothing) {
+    // We're editing clothing (shirt, pants, etc.)
+    targetAsset = target.clothing;
+    assetType = target.clothing.type || "clothing";
+  } else {
+    // We're editing the base mesh
+    targetAsset = currentBaseMesh;
+  }
+  
+  // Check if this asset has a UV map defined
+  if (!targetAsset?.uv_map) {
+    console.warn(`No UV map defined for ${assetType}:`, targetAsset?.id);
     return null;
   }
 
   try {
-    // currentBaseMesh.uv_map = "lowpoly.png"
-    // Fetch from uvmaps bucket
-    const uvMapUrl = await getAssetUrl("uvmaps", currentBaseMesh.uv_map, "public");
-    console.log('✓ Loaded UV map:', currentBaseMesh.uv_map);
+    // Fetch UV map from uvmaps bucket
+    const uvMapUrl = await getAssetUrl("uvmaps", targetAsset.uv_map, "public");
+    console.log(`✓ Loaded UV map for ${assetType}:`, targetAsset.uv_map);
     return uvMapUrl;
   } catch (err) {
-    console.error('✗ Failed to load UV map:', err);
+    console.error(`✗ Failed to load UV map for ${assetType}:`, err);
     return null;
   }
 }
