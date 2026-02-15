@@ -1597,3 +1597,158 @@ body.app {
   font-weight: 600;
   cursor: pointer;
 }
+/* ================= AUTH OVERLAY ================= */
+
+.auth-panel {
+  width: 420px;
+  max-width: 95%;
+}
+
+.auth-tabs {
+  display: flex;
+  margin-bottom: 20px;
+  gap: 6px;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 10px;
+  background: #1f1f1f;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  color: #bbb;
+  cursor: pointer;
+}
+
+.auth-tab.active {
+  background: var(--accent-app);
+  color: white;
+  border-color: var(--accent-app);
+}
+
+.auth-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-content input {
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: #111;
+  color: white;
+}
+
+.auth-main-btn {
+  padding: 12px;
+  border-radius: 6px;
+  border: none;
+  background: var(--accent-app);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-main-btn:hover {
+  opacity: 0.9;
+}
+
+.auth-divider {
+  text-align: center;
+  color: #777;
+  font-size: 12px;
+  margin: 6px 0;
+}
+
+.auth-oauth-btn {
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: #1c1c1c;
+  color: white;
+  cursor: pointer;
+}
+
+.auth-oauth-btn:hover {
+  background: #262626;
+}
+
+.auth-error {
+  font-size: 13px;
+  color: #ff6b6b;
+  text-align: center;
+}
+
+/* =========================================================
+   EXPORT & RANDOMIZER OVERLAYS
+========================================================= */
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  width: 60px;
+  height: 60px;
+  border: 6px solid rgba(255,255,255,0.2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+#randomizer-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#export-panel-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.85);
+}
+
+.export-panel-content {
+  background: #1e1e1e;
+  border-radius: 12px;
+  padding: 30px;
+  max-width: 800px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.export-type-card {
+  background: #2a2a2a;
+  border-radius: 8px;
+  padding: 20px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.export-type-card:hover {
+  background: #333 !important;
+}
+
+.format-btn {
+  background: #2a2a2a;
+  border: 2px solid transparent;
+  color: #fff;
+  padding: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.format-btn:hover {
+  background: #3a3a3a !important;
+}
+
+#final-export-btn:not(:disabled):hover {
+  background: #5a53df;
+}
