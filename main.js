@@ -49,7 +49,7 @@ const blendShapeMap = {};
 const morphMeshes = [];
 const morphValues = {};
 let equippedClothes = {
-  shirt: null,
+  shirts: null,
   pants: null,
   gloves: null,
   shoes: null,
@@ -545,7 +545,7 @@ function cleanupPreviousModel() {
   Object.keys(morphValues).forEach(k => delete morphValues[k]);
 
   equippedClothes = {
-    shirt: null,
+    shirts: null,
     pants: null,
     gloves: null,
     shoes: null,
@@ -920,7 +920,7 @@ function unequipAllClothes() {
   loadedClothingMeshes = {};
 
   equippedClothes = {
-    shirt: null,
+    shirts: null,
     pants: null,
     gloves: null,
     shoes: null,
@@ -2460,3 +2460,4 @@ document.getElementById("github-auth").addEventListener("click", async () => {
 supabase.auth.onAuthStateChange((event, session) => {
   updateUserMenu(session ?? null);
 });
+
