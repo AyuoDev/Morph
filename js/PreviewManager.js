@@ -17,7 +17,7 @@ export function getPreviewRenderer() {
     renderer.setSize(window.innerWidth, window.innerHeight, false);
     renderer.setScissorTest(true);
 
-    // 🔑 Attach canvas ONCE
+    // 🔒 Attach canvas ONCE
 renderer.domElement.style.position = "fixed";
 renderer.domElement.style.top = "0";
 renderer.domElement.style.left = "0";
@@ -53,6 +53,37 @@ export function unregisterPreview(preview) {
   previews = previews.filter(p => p !== preview);
 }
 
+// ============================================================================
+// HELPER: Check if element or any parent is hidden
+// ============================================================================
+function isElementVisible(element) {
+  if (!element) return false;
+  
+  // Walk up the DOM tree checking visibility
+  let current = element;
+  while (current && current !== document.body) {
+    const style = window.getComputedStyle(current);
+    
+    // Check if element is hidden
+    if (style.display === 'none' || 
+        style.visibility === 'hidden' || 
+        style.opacity === '0') {
+      return false;
+    }
+    
+    // Check if element has .panel class and no .active class
+    if (current.classList && current.classList.contains('panel')) {
+      if (!current.classList.contains('active')) {
+        return false;
+      }
+    }
+    
+    current = current.parentElement;
+  }
+  
+  return true;
+}
+
 function animate() {
   requestAnimationFrame(animate);
 
@@ -65,10 +96,17 @@ function animate() {
   renderer.clear();
 
   previews.forEach(p => {
+    // ✅ FIX 1: Check if container or parent panel is visible
+    if (!isElementVisible(p.container)) {
+      return; // Skip rendering if hidden
+    }
+    
     const rect = p.container.getBoundingClientRect();
 
-    // Skip if offscreen
+    // ✅ FIX 2: Skip if offscreen OR if rect is zero (hidden)
     if (
+      rect.width === 0 || 
+      rect.height === 0 ||
       rect.bottom < canvasRect.top ||
       rect.top > canvasRect.bottom ||
       rect.right < canvasRect.left ||
@@ -101,4 +139,3 @@ function animate() {
     renderer.render(p.scene, p.camera);
   });
 }
-

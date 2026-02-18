@@ -1752,3 +1752,1534 @@ body.app {
 #final-export-btn:not(:disabled):hover {
   background: #5a53df;
 }
+
+
+/* ============================================================================
+   RESPONSIVE DESIGN - MEDIA QUERIES
+   Mobile First Approach: Tablets → Mobile → Small Mobile
+   ============================================================================ */
+
+/* ========================================
+   TABLETS (768px - 1024px)
+   ======================================== */
+@media (max-width: 1024px) {
+  
+  /* Landing Page Hero */
+  .hero {
+    height: 70vh;
+  }
+  
+  .hero h1 {
+    font-size: 2.5rem;
+  }
+  
+  .hero p {
+    font-size: 1rem;
+  }
+  
+  /* Features Section */
+  .feature {
+    flex-direction: column;
+    gap: 40px;
+    padding: 60px 20px;
+  }
+  
+  .feature-reverse {
+    flex-direction: column;
+  }
+  
+  .feature-media video {
+    max-width: 100%;
+  }
+  
+  /* Morphara App - Top Bar */
+  .app-brand .app-title {
+    font-size: 18px;
+  }
+  
+  .app-version {
+    font-size: 10px;
+  }
+  
+  /* Morphara App - Main Layout */
+  .top-section {
+    width: 100% !important;
+    max-width: none !important;
+  }
+  
+  /* Base Mesh/Clothing Cards - Reduce to 3 columns */
+  .basemesh-cards,
+  .clothing-cards {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 12px;
+  }
+  
+  /* Right Panel - Reduce width */
+  .top-right {
+    width: 280px !important;
+  }
+  
+  /* Material Cards */
+  .material-card {
+    padding: 12px;
+  }
+  
+  /* Blend Shape Sliders */
+  .blend-shape-item {
+    padding: 10px 12px;
+  }
+  
+  /* Animation Cards */
+  .animation-cards {
+    gap: 10px;
+  }
+  
+  
+.animation-card {
+  background: #1a1a1a;
+  border: 2px solid #2a2a2a;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.animation-card:hover {
+  background: #252525;
+  border-color: #3a3a3a;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.animation-card.active {
+  background: linear-gradient(135deg, rgba(124, 92, 255, 0.15), rgba(74, 163, 255, 0.1));
+  border-color: #7c5cff;
+  box-shadow: 0 0 20px rgba(124, 92, 255, 0.3);
+}
+
+.animation-card.active::before {
+  content: "✓";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  background: #7c5cff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  z-index: 10;
+}
+
+.animation-card {
+    min-width: 140px;
+  }
+}
+
+/* ========================================
+   MOBILE (320px - 768px)
+   ======================================== */
+@media (max-width: 768px) {
+  
+  /* ========== LANDING PAGE ========== */
+  
+  /* Top Bar */
+  .site-topbar {
+    padding: 12px 16px;
+  }
+  
+  .site-topbar .brand img {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .site-topbar .brand span {
+    font-size: 16px;
+  }
+  
+  /* Hero */
+  .hero {
+    height: 60vh;
+  }
+  
+  .hero h1 {
+    font-size: 2rem;
+    padding: 0 20px;
+  }
+  
+  .hero p {
+    font-size: 0.95rem;
+    padding: 0 20px;
+  }
+  
+  .hero button {
+    padding: 12px 28px;
+    font-size: 14px;
+  }
+  
+  /* Features */
+  .feature {
+    padding: 40px 16px;
+    gap: 30px;
+  }
+  
+  .feature h2 {
+    font-size: 1.5rem;
+  }
+  
+  /* Behind the Scenes */
+  .behind-scenes-inner {
+    flex-direction: column;
+    gap: 30px;
+  }
+  
+  /* Changelog */
+  .changelog .version {
+    padding: 16px;
+  }
+  
+  .version h3 {
+    font-size: 1rem;
+  }
+  
+  /* Newsletter */
+  .newsletter-inner {
+    padding: 0 20px;
+  }
+  
+  .newsletter-inner h2 {
+    font-size: 1.5rem;
+  }
+  
+  #newsletter-form {
+    flex-direction: column;
+  }
+  
+  #newsletter-form input {
+    width: 100%;
+  }
+  
+  #newsletter-form button {
+    width: 100%;
+  }
+  
+  /* Footer */
+  footer > div {
+    padding: 0 20px;
+  }
+  
+  footer a {
+    display: block;
+    margin: 8px 0;
+  }
+  
+  /* ========== MORPHARA APP ========== */
+  
+  /* Top Bar */
+  .app-brand {
+    gap: 8px;
+  }
+  
+  .app-icon {
+    width: 28px !important;
+    height: 28px !important;
+  }
+  
+  .app-title {
+    font-size: 16px !important;
+  }
+  
+  .app-version {
+    font-size: 9px !important;
+  }
+  
+  .user-info {
+    gap: 8px;
+  }
+  
+  .user-email {
+    display: none; /* Hide email on mobile */
+  }
+  
+  .credits-badge {
+    font-size: 12px;
+    padding: 4px 10px;
+  }
+  
+  .top-right-controls {
+    gap: 6px;
+  }
+  
+  .top-right-controls button {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  
+  /* Main Layout - Stack Vertically */
+  .workspace {
+    flex-direction: column !important;
+    height: auto !important;
+  }
+  
+  .top-section {
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+  
+  .top-left {
+    height: auto !important;
+    border-right: none !important;
+    border-bottom: 1px solid #2a2a2a;
+  }
+  
+  .top-right {
+    width: 100% !important;
+    height: auto !important;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  
+  /* Canvas - Full Width, Smaller Height */
+  .canvas-wrapper {
+    height: 50vh !important;
+    min-height: 300px;
+  }
+  
+  canvas {
+    width: 100% !important;
+    height: 100% !important;
+  }
+  
+  /* Base Mesh Cards - 2 Columns */
+  .basemesh-cards {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px;
+    padding: 12px;
+  }
+  
+  .basemesh-card {
+    padding: 10px;
+  }
+  
+  .basemesh-card h3 {
+    font-size: 12px;
+  }
+  
+  /* Clothing Cards - 2 Columns */
+  .clothing-cards {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px;
+    padding: 12px;
+  }
+  
+  .clothing-card {
+    padding: 10px;
+  }
+  
+  .clothing-card h4 {
+    font-size: 11px;
+  }
+  
+  .clothing-header {
+    padding: 12px;
+  }
+  
+  .category-tabs {
+    gap: 6px;
+    padding: 0 12px;
+  }
+  
+  .category-tab {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+  
+  /* Materials Panel */
+  .materials-panel {
+    padding: 12px;
+  }
+  
+  .material-card {
+    padding: 10px;
+  }
+  
+  .material-label {
+    font-size: 11px;
+  }
+  
+  .color-picker {
+    width: 100%;
+  }
+  
+  /* Blend Shapes Panel */
+  .blend-shapes-panel {
+    padding: 12px;
+  }
+  
+  .blend-shape-item {
+    padding: 8px 10px;
+  }
+  
+  .blend-shape-label {
+    font-size: 11px;
+  }
+  
+  .blend-shape-slider {
+    width: 100%;
+  }
+  
+  /* Bottom Panel - Animations */
+  .bottom-panel {
+    padding: 12px;
+  }
+  
+  .animation-cards {
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .animation-card {
+    min-width: 120px;
+    padding: 8px;
+  }
+  
+  .animation-card h4 {
+    font-size: 11px;
+  }
+  
+  /* ========== MODALS / OVERLAYS ========== */
+  
+  /* Export Panel */
+  .export-panel-overlay {
+    padding: 20px;
+  }
+  
+  .export-panel-content {
+    width: 95% !important;
+    max-width: none;
+    padding: 20px;
+  }
+  
+  .export-panel-header h2 {
+    font-size: 1.3rem;
+  }
+  
+  .export-type-cards {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .export-type-card {
+    width: 100%;
+  }
+  
+  .format-options {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+  
+  .format-btn {
+    padding: 12px;
+  }
+  
+  .export-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .export-actions button {
+    width: 100%;
+  }
+  
+  /* Plans Overlay */
+  .plans-overlay .overlay-panel {
+    width: 95% !important;
+    max-width: none;
+    padding: 20px;
+  }
+  
+  .overlay-header h2 {
+    font-size: 1.3rem;
+  }
+  
+  .plan-toggle {
+    transform: scale(0.9);
+  }
+  
+  .pricing-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px;
+  }
+  
+  .plan-card {
+    padding: 20px;
+  }
+  
+  .plan-card h3 {
+    font-size: 1.2rem;
+  }
+  
+  .price {
+    font-size: 1.8rem;
+  }
+  
+  .credit-packs {
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+  
+  /* Texture Painter */
+  #texture-painter-mode {
+    flex-direction: column;
+  }
+  
+  .painter-sidebar {
+    width: 100% !important;
+    height: auto;
+    max-height: 200px;
+    overflow-y: auto;
+    border-right: none !important;
+    border-bottom: 1px solid #333;
+  }
+  
+  #painter-viewport {
+    width: 100% !important;
+    height: 60vh;
+  }
+  
+  .tool-btn {
+    padding: 10px;
+    font-size: 12px;
+  }
+  
+  .painter-control {
+    padding: 10px;
+  }
+  
+  .painter-control label {
+    font-size: 11px;
+  }
+  
+  /* Randomizer Loading */
+  #randomizer-loading .spinner {
+    width: 50px;
+    height: 50px;
+  }
+  
+  /* Legal Pages */
+  .legal-container {
+    margin: 40px auto;
+    padding: 20px;
+  }
+  
+  .legal-container h1 {
+    font-size: 1.5rem;
+  }
+  
+  .legal-container h2 {
+    font-size: 1.1rem;
+  }
+  
+  .legal-container p,
+  .legal-container li {
+    font-size: 14px;
+  }
+}
+
+/* ========================================
+   SMALL MOBILE (320px - 480px)
+   ======================================== */
+@media (max-width: 480px) {
+  
+  /* Landing Page */
+  .hero h1 {
+    font-size: 1.6rem;
+  }
+  
+  .hero p {
+    font-size: 0.9rem;
+  }
+  
+  .feature h2 {
+    font-size: 1.3rem;
+  }
+  
+  .feature p {
+    font-size: 0.9rem;
+  }
+  
+  /* App Cards - Single Column */
+  .basemesh-cards,
+  .clothing-cards {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Smaller Touch Targets */
+  button {
+    min-height: 44px; /* iOS recommended touch target */
+  }
+  
+  /* Canvas - Smaller on tiny screens */
+  .canvas-wrapper {
+    height: 40vh !important;
+    min-height: 250px;
+  }
+  
+  /* Export Panel */
+  .export-panel-content {
+    padding: 16px;
+  }
+  
+  /* Plans */
+  .plan-card {
+    padding: 16px;
+  }
+  
+  .price {
+    font-size: 1.5rem;
+  }
+}
+
+/* ========================================
+   LANDSCAPE ORIENTATION (Mobile)
+   ======================================== */
+@media (max-width: 768px) and (orientation: landscape) {
+  
+  /* Make canvas larger in landscape */
+  .canvas-wrapper {
+    height: 70vh !important;
+  }
+  
+  /* Hide some UI elements to maximize canvas space */
+  .top-left {
+    max-height: 30vh;
+    overflow-y: auto;
+  }
+  
+  .top-right {
+    max-height: 30vh;
+  }
+  
+  .bottom-panel {
+    max-height: 25vh;
+  }
+}
+
+/* ========================================
+   TOUCH DEVICE OPTIMIZATIONS
+   ======================================== */
+@media (hover: none) and (pointer: coarse) {
+  
+  /* Larger touch targets */
+  .basemesh-card,
+  .clothing-card,
+  .animation-card,
+  .material-card {
+    min-height: 44px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: rgba(124, 92, 255, 0.2);
+  }
+  
+  /* Better slider touch targets */
+  input[type="range"] {
+    height: 30px;
+  }
+  
+  input[type="range"]::-webkit-slider-thumb {
+    width: 20px;
+    height: 20px;
+  }
+  
+  input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+  }
+  
+  /* Remove hover effects on touch devices */
+  .basemesh-card:hover,
+  .clothing-card:hover,
+  .animation-card:hover {
+    transform: none;
+  }
+  
+  /* Prevent text selection during touch interactions */
+  .basemesh-cards,
+  .clothing-cards,
+  .animation-cards {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
+/* ========================================
+   PRINT STYLES (Bonus)
+   ======================================== */
+@media print {
+  .site-topbar,
+  .top-right-controls,
+  .bottom-panel,
+  button {
+    display: none;
+  }
+  
+  .canvas-wrapper {
+    height: auto;
+    page-break-inside: avoid;
+  }
+}
+/* ============================================================================
+   v0.1.1 UI OVERHAUL - ADD TO style.css
+   ============================================================================ */
+
+/* ========================================
+   BLEND SHAPE CATEGORIZED PANELS
+   ======================================== */
+
+.blend-category {
+  background: #1f1f1f;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.blend-category-header {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  cursor: pointer;
+  background: #252525;
+  transition: background 0.2s;
+  user-select: none;
+}
+
+.blend-category-header:hover {
+  background: #2a2a2a;
+}
+
+.blend-category-icon {
+  width: 24px;
+  height: 24px;
+  margin-right: 12px;
+  object-fit: contain;
+}
+
+.blend-category-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  text-transform: capitalize;
+}
+
+.blend-category-chevron {
+  font-size: 14px;
+  color: #888;
+  transition: transform 0.3s ease;
+  font-weight: bold;
+}
+
+.blend-category.collapsed .blend-category-chevron {
+  transform: rotate(-90deg);
+}
+
+.blend-category-content {
+  max-height: 1000px;
+  overflow: hidden;
+  transition: max-height 0.4s ease, padding 0.4s ease;
+  padding: 8px 12px 12px 12px;
+}
+
+.blend-category.collapsed .blend-category-content {
+  max-height: 0;
+  padding: 0 12px;
+}
+
+/* Special category (Gender) - highlighted */
+.blend-category.special {
+  border-color: #7c5cff;
+  box-shadow: 0 0 20px rgba(124, 92, 255, 0.2);
+}
+
+.blend-category.special .blend-category-header {
+  background: linear-gradient(135deg, rgba(124, 92, 255, 0.15), rgba(74, 163, 255, 0.08));
+}
+
+.blend-category.special .blend-category-name {
+  color: #7c5cff;
+}
+
+/* ========================================
+   BASE MESH CARDS - 2 COLUMN GRID
+   ======================================== */
+
+.basemesh-cards {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 12px;
+  padding: 12px;
+}
+
+.basemesh-card {
+  position: relative;
+  max-height: 180px !important;
+}
+
+.base-mesh-card .preview-canvas {
+  height: 140px !important;
+  max-height: 140px !important;
+}
+
+
+.animation-card {
+  max-height: 160px !important;
+}
+
+.animation-card .preview-canvas {
+  height: 120px !important;
+  max-height: 120px !important;
+}
+
+
+/* Base Mesh Cards - Proper Heights */
+.base-mesh-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 200px !important;
+  max-height: 200px !important;
+}
+
+.base-mesh-card .preview-canvas {
+  flex: 1;
+  min-height: 0; /* Allow flex to shrink */
+  height: 150px !important;
+  max-height: 150px !important;
+  overflow: hidden;
+}
+
+.base-mesh-card .base-mesh-name {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Animation Cards - Proper Heights */
+.animation-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 180px !important;
+  max-height: 180px !important;
+}
+
+.animation-card .preview-canvas {
+  flex: 1;
+  min-height: 0;
+  height: 130px !important;
+  max-height: 130px !important;
+  overflow: hidden;
+}
+
+.animation-card .animation-name,
+.animation-card .base-mesh-name {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.credit-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: linear-gradient(135deg, #7c5cff, #6a4fd9);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(124, 92, 255, 0.5);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  pointer-events: none; /* Don't block card clicks */
+}
+
+.credit-badge::before {
+  content: "💎";
+  font-size: 10px;
+}
+
+/* ========================================
+   ANIMATION CARDS - 2 COLUMN GRID
+   ======================================== */
+
+.animation-cards {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 10px;
+  padding: 12px;
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.animation-card {
+  min-width: auto !important; /* Remove horizontal scroll min-width */
+}
+
+/* ========================================
+   CLOTHING CATEGORY BUTTONS WITH ICONS
+   ======================================== */
+
+.clothes-category {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  position: relative;
+}
+
+.clothes-category .category-name {
+  font-weight: 500;
+}
+
+.clothes-category .item-count {
+  color: #888;
+  font-size: 11px;
+  font-weight: 400;
+  margin-left: -2px;
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+}
+
+.clothes-category:hover .item-count {
+  opacity: 1;
+  color: #aaa;
+}
+
+.clothes-category.active .item-count {
+  color: #4a9eff;
+  opacity: 1;
+}
+
+.clothes-category-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  filter: brightness(0.7) grayscale(0.3);
+  transition: all 0.3s ease;
+}
+
+.clothes-category.active .clothes-category-icon {
+  filter: brightness(1) grayscale(0);
+}
+
+.clothes-category:hover .clothes-category-icon {
+  filter: brightness(1) grayscale(0);
+  transform: scale(1.1);
+}
+
+/* ========================================
+   RESPONSIVE ADJUSTMENTS
+   ======================================== */
+
+@media (max-width: 768px) {
+  .basemesh-cards {
+    grid-template-columns: 1fr !important; /* Single column on mobile */
+  }
+  
+  .animation-cards {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .blend-category-icon {
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+  }
+  
+  .blend-category-name {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  
+.animation-card {
+  max-height: 160px !important;
+}
+
+.animation-card .preview-canvas {
+  height: 120px !important;
+  max-height: 120px !important;
+}
+
+
+/* Base Mesh Cards - Proper Heights */
+.base-mesh-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 200px !important;
+  max-height: 200px !important;
+}
+
+.base-mesh-card .preview-canvas {
+  flex: 1;
+  min-height: 0; /* Allow flex to shrink */
+  height: 150px !important;
+  max-height: 150px !important;
+  overflow: hidden;
+}
+
+.base-mesh-card .base-mesh-name {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Animation Cards - Proper Heights */
+.animation-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 180px !important;
+  max-height: 180px !important;
+}
+
+.animation-card .preview-canvas {
+  flex: 1;
+  min-height: 0;
+  height: 130px !important;
+  max-height: 130px !important;
+  overflow: hidden;
+}
+
+.animation-card .animation-name,
+.animation-card .base-mesh-name {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.credit-badge {
+    font-size: 10px;
+    padding: 3px 8px;
+  }
+  
+  .clothes-category-icon {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+/* Fix: Prevent preview models from rendering outside panel bounds */
+#animations-panel {
+  overflow: hidden !important;
+  position: relative;
+}
+
+#basemesh-panel {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+#clothes-items-panel {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  /* position: relative removed - let .panel-right handle positioning */
+}
+
+/* Allow scrolling inside panel content, but clip previews */
+.basemesh-cards,
+.clothes-items,
+#animations-list {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  max-height: 100%;
+}
+
+
+/* Fix: Top bar above preview canvas */
+#top-panel {
+  z-index: 1000 !important;
+}
+
+
+/* ============================================================================
+   ANIMATION CARD STYLES - FINAL (Override all previous rules)
+   ============================================================================ */
+
+.animation-card {
+  background: #1a1a1a !important;
+  border: 2px solid #2a2a2a !important;
+  border-radius: 10px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.animation-card:hover {
+  background: #252525 !important;
+  border-color: #3a3a3a !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+}
+
+.animation-card.active {
+  background: linear-gradient(135deg, rgba(124, 92, 255, 0.2), rgba(74, 163, 255, 0.15)) !important;
+  border-color: #7c5cff !important;
+  box-shadow: 0 0 20px rgba(124, 92, 255, 0.4) !important;
+}
+
+.animation-card.active::after {
+  content: "✓";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  background: #7c5cff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  z-index: 100;
+}
+
+/* ============================================================================
+   MOVED FROM HTML <style> BLOCK
+   ============================================================================ */
+
+/* Active card states */
+.clothing-card.active,
+.clothing-card-none.active {
+  border: 2px solid #6c63ff !important;
+  box-shadow: 0 0 8px rgba(108, 99, 255, 0.4);
+}
+
+.base-mesh-card.active {
+  border: 2px solid #6c63ff !important;
+  box-shadow: 0 0 8px rgba(108, 99, 255, 0.4);
+}
+
+/* Active plan card */
+.plan-card.active-plan {
+  border: 2px solid #6c63ff !important;
+  position: relative;
+}
+
+.plan-card.active-plan::before {
+  content: "✓ Active";
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #6c63ff;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 20px;
+}
+
+.plan-card.active-plan .plan-btn.disabled {
+  background: #333;
+  color: #666;
+  cursor: not-allowed;
+}
+
+/* Plan badge next to user button */
+#plan-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 4px;
+  vertical-align: middle;
+  background: #444;
+  color: #fff;
+}
+
+/* Export panel hover states */
+.export-type-card:hover {
+  background: #333 !important;
+}
+
+.format-btn:hover {
+  background: #3a3a3a !important;
+}
+
+#final-export-btn:not(:disabled):hover {
+  background: #5a53df;
+}
+
+
+/* ============================================================================
+   SETTINGS OVERLAY — Centered modal (moved from inline HTML styles)
+   ============================================================================ */
+
+#settings-overlay {
+  display: none;              /* hidden by default; JS sets display:flex to open */
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.75);
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+}
+
+.settings-panel {
+  position: relative;
+  width: 90%;
+  max-width: 520px;
+  background: #121212;
+  border-radius: 14px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: panelIn 0.3s ease;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.settings-header h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #fff;
+  font-weight: 600;
+}
+
+.settings-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-section {
+  padding: 20px;
+  background: #1e1e1e;
+  border-radius: 8px;
+  border: 1px solid #2a2a2a;
+}
+
+.settings-section h3 {
+  color: #aaa;
+  font-size: 11px;
+  font-weight: 700;
+  margin: 0 0 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.settings-section p {
+  color: #888;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0 0 14px;
+}
+
+#settings-email {
+  color: #ccc;
+  font-size: 14px;
+}
+
+#settings-plan {
+  color: #6c63ff;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.settings-btn-danger {
+  width: 100%;
+  padding: 11px;
+  background: #c62828;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.settings-btn-danger:hover {
+  background: #e53935;
+}
+
+.settings-btn-secondary {
+  width: 100%;
+  padding: 11px;
+  background: #2a2a2a;
+  color: #fff;
+  border: 1px solid #444;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.settings-btn-secondary:hover {
+  background: #333;
+}
+
+
+/* ============================================================================
+   EXPORT PANEL — Inline styles promoted to classes
+   ============================================================================ */
+
+.export-panel-close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 28px;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  line-height: 1;
+}
+
+.export-panel-close-btn:hover {
+  color: #fff;
+}
+
+.export-panel-title {
+  color: #fff;
+  margin: 0 0 20px;
+  font-size: 24px;
+}
+
+.export-preview-wrap {
+  margin-bottom: 30px;
+}
+
+#export-preview-container {
+  width: 400px;
+  height: 400px;
+  border-radius: 8px;
+  background: #000;
+  margin: 0 auto;
+}
+
+.export-section-title {
+  color: #fff;
+  font-size: 16px;
+  margin: 0 0 12px;
+}
+
+.export-type-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.export-type-icon {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.export-type-name {
+  color: #fff;
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+
+.export-type-desc {
+  color: #888;
+  font-size: 12px;
+  margin: 0 0 10px;
+}
+
+.export-type-cost-paid {
+  color: #6c63ff;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.export-type-cost-free {
+  color: #0f0;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.export-format-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.export-format-note {
+  color: #888;
+  font-size: 12px;
+  margin-top: 10px;
+  text-align: center;
+}
+
+.format-label-sub {
+  font-size: 11px;
+  color: #888;
+}
+
+/* Randomizer loading overlay content */
+.randomizer-loading-content {
+  text-align: center;
+}
+
+.randomizer-loading-content h2 {
+  color: #fff;
+  font-size: 24px;
+  margin: 0 0 10px;
+}
+
+.randomizer-loading-content p {
+  color: #aaa;
+  font-size: 14px;
+}
+
+.spinner-wrap {
+  margin: 0 auto 20px;
+}
+
+/* Material panel inline selects/labels */
+.material-select {
+  width: 100%;
+  padding: 8px;
+  background: #2a2a2a;
+  color: #fff;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.create-texture-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  background: #3a3a3a;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.2s;
+}
+
+.create-texture-btn:hover {
+  background: #4a4a4a;
+}
+
+#resolution-upgrade-hint {
+  font-size: 11px;
+  color: #888;
+  margin: 6px 0 0 0;
+  display: none;
+}
+
+.material-prop-label {
+  font-size: 12px;
+  color: #aaa;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.material-prop-row {
+  margin-bottom: 12px;
+}
+
+.material-prop-range {
+  width: 100%;
+  cursor: pointer;
+}
+
+/* Clothes panel heading */
+.panel-heading {
+  margin-top: 0;
+  color: #fff;
+  font-size: 14px;
+}
+
+/* Reset texture button in painter */
+#reset-texture-btn {
+  background: #ff5555;
+  margin-top: 12px;
+}
+
+/* App brand clickable */
+.app-brand-link {
+  cursor: pointer;
+}
+
+/* Launch list color override for unavailable feature */
+.launch-feature-unavailable {
+  color: #888;
+}
+
+
+/* Export section spacing */
+.export-section {
+  margin-bottom: 25px;
+}
+
+/* Final export button base styles */
+.final-export-btn {
+  width: 100%;
+  padding: 15px;
+  background: #6c63ff;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.final-export-btn:not(:disabled) {
+  opacity: 1;
+  cursor: pointer;
+}
+
+/* Panel loading/placeholder text */
+.panel-loading-text {
+  color: #bbb;
+  font-size: 13px;
+  padding: 16px;
+}

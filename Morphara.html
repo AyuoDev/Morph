@@ -12,71 +12,6 @@
 <!-- Mobile / PWA -->
 <link rel="apple-touch-icon" href="images/morphara_icon.png">
   <link rel="stylesheet" href="css/style.css">
-  <style>
-    /* Active clothing card */
-    .clothing-card.active,
-    .clothing-card-none.active {
-      border: 2px solid #6c63ff !important;
-      box-shadow: 0 0 8px rgba(108,99,255,0.4);
-    }
-
-    /* Active base mesh card */
-    .base-mesh-card.active {
-      border: 2px solid #6c63ff !important;
-      box-shadow: 0 0 8px rgba(108,99,255,0.4);
-    }
-
-    /* Active plan card highlight */
-    .plan-card.active-plan {
-      border: 2px solid #6c63ff !important;
-      position: relative;
-    }
-    .plan-card.active-plan::before {
-      content: "✓ Active";
-      position: absolute;
-      top: -12px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #6c63ff;
-      color: #fff;
-      font-size: 11px;
-      font-weight: 700;
-      padding: 2px 10px;
-      border-radius: 20px;
-    }
-    .plan-card.active-plan .plan-btn.disabled {
-      background: #333;
-      color: #666;
-      cursor: not-allowed;
-    }
-    #plan-badge {
-      font-size: 10px;
-      font-weight: 700;
-      padding: 2px 6px;
-      border-radius: 4px;
-      margin-left: 4px;
-      vertical-align: middle;
-      background: #444;
-      color: #fff;
-    }
-  
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.export-type-card:hover {
-  background: #333 !important;
-}
-
-.format-btn:hover {
-  background: #3a3a3a !important;
-}
-
-#final-export-btn:not(:disabled):hover {
-  background: #5a53df;
-}
-
-</style>
 
   <script type="importmap">
   {
@@ -118,10 +53,6 @@
         <span>OR</span>
       </div>
 
-      <button id="google-auth" class="auth-oauth-btn">
-        Continue with Google
-      </button>
-
       <button id="github-auth" class="auth-oauth-btn">
         Continue with GitHub
       </button>
@@ -147,7 +78,7 @@
 
     <div class="launch-content">
 
-      <h2>Welcome to Morphara v0.1.0</h2>
+      <h2>Welcome to Morphara v0.1.1</h2>
 
       <p>
         Morphara is a browser-based character creation tool designed for game developers,
@@ -160,7 +91,7 @@
         <li>✔ Texture Painting</li>
         <li>✔ Animation System</li>
         <li>✔ GLB Export Ready</li>
-              <li style="color:#888;">✘ FBX Export (Premium+)</li>
+              <li class="launch-feature-unavailable">✘ FBX Export (Premium+)</li>
       </ul>
 
       <h3>🚀 Roadmap</h3>
@@ -171,8 +102,8 @@
         <li>Advanced Animation Blending</li>
       </ul>
 
-      <button class="launch-cta open-plans">
-        View Membership Plans
+      <button class="launch-cta" id="launch-signup-btn">
+        Sign Up Now
       </button>
 
     </div>
@@ -185,11 +116,11 @@
 
   <!-- LEFT -->
   <div class="top-section top-left">
-    <div class="app-brand" style="cursor:pointer;" onclick="window.location.href='index.html'">
+    <div class="app-brand app-brand-link" onclick="window.location.href='index.html'">
   <img src="images/morphara_icon.png" class="app-icon" />
   <div class="app-title">
     Morphara
-    <span class="app-version">v0.1.0</span>
+    <span class="app-version">v0.1.1</span>
   </div>
 </div>
 
@@ -235,10 +166,8 @@
 
   <!-- ================= LEFT PANELS ================= -->
 
-  <div id="basemesh-panel" class="panel">
-    <p style="color:#bbb;font-size:13px;">
-      Base mesh selection coming soon.
-    </p>
+  <div id="basemesh-panel" class="panel basemesh-cards">
+    <p class="panel-loading-text">Base mesh selection coming soon.</p>
   </div>
 
   <div id="blendshape-panel" class="panel">
@@ -261,6 +190,45 @@
     <label class="section-title">Texture Presets</label>
     <div id="texture-grid"></div>
   </div>
+
+  <!-- NEW: Active Texture Selector -->
+  <div class="material-section">
+    <label class="section-title">Active Texture</label>
+    <select id="active-texture-select" class="material-select">
+      <option value="custom_1">Custom Texture 1</option>
+    </select>
+    <button id="create-new-texture-btn" class="create-texture-btn">
+      + Create New Texture
+    </button>
+  </div>
+
+  <!-- NEW: Texture Resolution Selector -->
+  <div class="material-section">
+    <label class="section-title">Texture Resolution</label>
+    <select id="texture-resolution-select" class="material-select">
+      <option value="1024">1024x1024 (Free)</option>
+      <option value="2048" disabled>2048x2048 (Premium)</option>
+      <option value="4096" disabled>4096x4096 (Studio)</option>
+    </select>
+    <p id="resolution-upgrade-hint">
+      Upgrade to Premium/Studio for higher resolutions
+    </p>
+  </div>
+
+  <!-- NEW: Material Properties (Roughness & Metalness) -->
+  <div class="material-section">
+    <label class="section-title">Material Properties</label>
+    
+    <div class="material-prop-row">
+      <label class="material-prop-label">Roughness: <span id="roughness-value">0.5</span></label>
+      <input type="range" id="roughness-slider" min="0" max="1" step="0.01" value="0.5" class="material-prop-range">
+    </div>
+    <div>
+      <label class="material-prop-label">Metalness: <span id="metalness-value">0.0</span></label>
+      <input type="range" id="metalness-slider" min="0" max="1" step="0.01" value="0.0" class="material-prop-range">
+    </div>
+  </div>
+
 <div class="material-section">
   <button id="open-texture-painter" class="paint-btn">
     🎨 Paint Texture
@@ -269,23 +237,63 @@
 </div>
 
 <div id="clothes-panel" class="panel">
-  <h4 style="margin-top:0;color:#fff;font-size:14px;">Clothes</h4>
+  <h4 class="panel-heading">Clothes</h4>
 
-<button class="clothes-category" data-category="shirts">Shirts</button>
-<button class="clothes-category" data-category="jacket">Jackets</button>
-<button class="clothes-category" data-category="pants">Pants</button>
-<button class="clothes-category" data-category="shoes">Shoes</button>
-<button class="clothes-category" data-category="gloves">Gloves</button>
-<button class="clothes-category" data-category="hair">Hair</button>
-<button class="clothes-category" data-category="facialHair">Facial Hair</button>
-<button class="clothes-category" data-category="headwear">Headwear</button>
-<button class="clothes-category" data-category="glasses">Glasses</button>
-<button class="clothes-category" data-category="accessories">Accessories</button>
+<button class="clothes-category" data-category="shirts">
+  <img src="icons/clothing/shirt.png" class="clothes-category-icon" onerror="this.style.display='none'" alt="">
+  <span class="category-name">Shirts</span>
+  <span class="item-count">(0)</span>
+</button>
+<button class="clothes-category" data-category="jacket">
+  <img src="icons/clothing/jacket.png" class="clothes-category-icon" onerror="this.style.display='none'" alt="">
+  <span class="category-name">Jackets</span>
+  <span class="item-count">(0)</span>
+</button>
+<button class="clothes-category" data-category="pants">
+  <img src="icons/clothing/pants.png" class="clothes-category-icon" onerror="this.style.display='none'" alt="">
+  <span class="category-name">Pants</span>
+  <span class="item-count">(0)</span>
+</button>
+<button class="clothes-category" data-category="shoes">
+  <img src="icons/clothing/shoes.png" class="clothes-category-icon" onerror="this.style.display='none'" alt="">
+  <span class="category-name">Shoes</span>
+  <span class="item-count">(0)</span>
+</button>
+<button class="clothes-category" data-category="gloves">
+  <img src="icons/clothing/gloves.png" class="clothes-category-icon" onerror="this.style.display='none'" alt="">
+  <span class="category-name">Gloves</span>
+  <span class="item-count">(0)</span>
+</button>
+<button class="clothes-category" data-category="hair">
+  <img src="icons/clothing/hair.png" class="clothes-category-icon" onerror="this.style.display='none'" alt="">
+  <span class="category-name">Hair</span>
+  <span class="item-count">(0)</span>
+</button>
+<button class="clothes-category" data-category="facialHair">
+  <img src="icons/clothing/facial_hair.png" class="clothes-category-icon" onerror="this.style.display='none'" alt="">
+  <span class="category-name">Facial Hair</span>
+  <span class="item-count">(0)</span>
+</button>
+<button class="clothes-category" data-category="headwear">
+  <img src="icons/clothing/headwear.png" class="clothes-category-icon" onerror="this.style.display='none'" alt="">
+  <span class="category-name">Headwear</span>
+  <span class="item-count">(0)</span>
+</button>
+<button class="clothes-category" data-category="glasses">
+  <img src="icons/clothing/glasses.png" class="clothes-category-icon" onerror="this.style.display='none'" alt="">
+  <span class="category-name">Glasses</span>
+  <span class="item-count">(0)</span>
+</button>
+<button class="clothes-category" data-category="accessories">
+  <img src="icons/clothing/accessories.png" class="clothes-category-icon" onerror="this.style.display='none'" alt="">
+  <span class="category-name">Accessories</span>
+  <span class="item-count">(0)</span>
+</button>
 
 </div>
 <div id="animations-panel" class="panel">
-  <h4 style="margin-top:0;color:#fff;font-size:14px;">Animations</h4>
-  <div id="animations-list"></div>
+  <h4 class="panel-heading">Animations</h4>
+  <div id="animations-list" class="animation-cards"></div>
 </div>
 <div id="randomizer-panel" class="panel">
 
@@ -375,6 +383,9 @@
         <button class="tool-btn" data-tool="draw">Draw</button>
         <button class="tool-btn" data-tool="erase">Erase</button>
         <button class="tool-btn" data-tool="bucket">Bucket</button>
+        <button class="tool-btn" id="reset-texture-btn" disabled>
+          🔄 Reset Texture
+        </button>
 
         <div class="tool-subpanel">
           <label>Color</label>
@@ -554,10 +565,10 @@
 
 <!-- Randomizer Loading Overlay -->
 <div id="randomizer-loading" class="overlay hidden">
-  <div style="text-align:center;">
-    <div class="spinner" style="margin:0 auto 20px;"></div>
-    <h2 style="color:#fff;font-size:24px;margin:0 0 10px;">Creating Random Character...</h2>
-    <p style="color:#aaa;font-size:14px;">Please wait</p>
+  <div class="randomizer-loading-content">
+    <div class="spinner spinner-wrap"></div>
+    <h2>Creating Random Character...</h2>
+    <p>Please wait</p>
   </div>
 </div>
 
@@ -565,60 +576,95 @@
 <div id="export-panel-overlay" class="overlay hidden">
   <div class="export-panel-content">
     
-    <button id="export-panel-close" style="position:absolute;top:15px;right:15px;background:none;border:none;color:#999;font-size:28px;cursor:pointer;padding:0;width:30px;height:30px;line-height:1;">&times;</button>
+    <button id="export-panel-close" class="export-panel-close-btn">&times;</button>
 
-    <h2 style="color:#fff;margin:0 0 20px;font-size:24px;">Export Your Character</h2>
+    <h2 class="export-panel-title">Export Your Character</h2>
 
-    <div style="margin-bottom:30px;">
-      <div id="export-preview-container" style="width:400px;height:400px;border-radius:8px;background:#000;margin:0 auto;"></div>
+    <div class="export-preview-wrap">
+      <div id="export-preview-container"></div>
     </div>
 
-    <div style="margin-bottom:25px;">
-      <h3 style="color:#fff;font-size:16px;margin:0 0 12px;">What do you want to export?</h3>
+    <div class="export-section">
+      <h3 class="export-section-title">What do you want to export?</h3>
       
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
+      <div class="export-type-grid">
         <div class="export-type-card" onclick="window.selectExportType('full')">
-          <div style="font-size:18px;margin-bottom:8px;">📦</div>
-          <h4 style="color:#fff;font-size:14px;margin:0 0 8px;">Full Character</h4>
-          <p style="color:#888;font-size:12px;margin:0 0 10px;">Model + Textures + Animations</p>
-          <p style="color:#6c63ff;font-size:13px;font-weight:600;margin:0;">
+          <div class="export-type-icon">📦</div>
+          <h4 class="export-type-name">Full Character</h4>
+          <p class="export-type-desc">Model + Textures + Animations</p>
+          <p class="export-type-cost-paid">
             <span id="full-cost">1</span> Credit
           </p>
         </div>
 
         <div class="export-type-card" onclick="window.selectExportType('animation')">
-          <div style="font-size:18px;margin-bottom:8px;">🎬</div>
-          <h4 style="color:#fff;font-size:14px;margin:0 0 8px;">Animation Only</h4>
-          <p style="color:#888;font-size:12px;margin:0 0 10px;">Skeleton + Animation data</p>
-          <p style="color:#0f0;font-size:13px;font-weight:600;margin:0;">FREE</p>
+          <div class="export-type-icon">🎬</div>
+          <h4 class="export-type-name">Animation Only</h4>
+          <p class="export-type-desc">Skeleton + Animation data</p>
+          <p class="export-type-cost-free">FREE</p>
         </div>
       </div>
     </div>
 
-    <div style="margin-bottom:25px;">
-      <h3 style="color:#fff;font-size:16px;margin:0 0 12px;">Choose Format</h3>
+    <div class="export-section">
+      <h3 class="export-section-title">Choose Format</h3>
       
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
-        <button class="format-btn" data-format="glb" onclick="window.selectFormat('glb')">
-          GLB <span style="font-size:11px;color:#888;">(Binary)</span>
+      <div class="export-format-grid">
+        <button class="format-btn" data-format="glb" onclick="window.selectFormat('glb', this)">>
+          GLB <span class="format-label-sub">(Binary)</span>
         </button>
-        <button class="format-btn" data-format="gltf" onclick="window.selectFormat('gltf')">
-          GLTF <span style="font-size:11px;color:#888;">(JSON)</span>
+        <button class="format-btn" data-format="gltf" onclick="window.selectFormat('gltf', this)">>
+          GLTF <span class="format-label-sub">(JSON)</span>
         </button>
-        <button class="format-btn" data-format="fbx" onclick="window.selectFormat('fbx')">
-          FBX <span style="font-size:11px;color:#888;">(Unity/Unreal/Godot)</span>
+        <button class="format-btn" data-format="fbx" onclick="window.selectFormat('fbx', this)">>
+          FBX <span class="format-label-sub">(Unity/Unreal/Godot)</span>
         </button>
       
-    <p style="color:#888;font-size:12px;margin-top:10px;text-align:center;">Note: FBX export requires Premium or Studio plan (coming in v0.1.1)</p></div>
+    <p class="export-format-note">Note: FBX export requires Premium or Studio plan</p></div>
     </div>
 
-    <button id="final-export-btn" disabled style="width:100%;padding:15px;background:#6c63ff;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;transition:all 0.2s;opacity:0.5;cursor:not-allowed;">
+    <button id="final-export-btn" class="final-export-btn" disabled>
       Select options above
     </button>
 
   </div>
 </div>
 
+<!-- ================= SETTINGS OVERLAY ================= -->
+<div id="settings-overlay">
+  <div class="settings-panel">
+
+    <div class="settings-header">
+      <h2>⚙️ Account Settings</h2>
+      <button id="close-settings" class="icon-btn">✕</button>
+    </div>
+
+    <div class="settings-body">
+
+      <!-- Account Info -->
+      <div class="settings-section">
+        <h3>Account Information</h3>
+        <p><strong>Email:</strong> <span id="settings-email">-</span></p>
+        <p><strong>Plan:</strong> <span id="settings-plan">-</span></p>
+      </div>
+
+      <!-- Subscription -->
+      <div class="settings-section">
+        <h3>💳 Subscription</h3>
+        <p>Cancel your subscription. You'll keep access until the end of your billing period.</p>
+        <button id="cancel-subscription-btn" class="settings-btn-danger">Cancel Subscription</button>
+      </div>
+
+      <!-- Delete Account -->
+      <div class="settings-section">
+        <h3>🗑️ Delete Account</h3>
+        <p>Permanently disable your account. Your data will be retained for 30 days.</p>
+        <button id="delete-account-btn" class="settings-btn-secondary">Delete Account</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
-

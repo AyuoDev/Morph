@@ -6,7 +6,20 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 import { initPlansOverlayControls } from "./js/Controls.js";
 import { createPreview } from "./js/PreviewRenderer.js";
-import { TexturePainter } from "./js/TexturePainter.js";
+import {
+  TexturePainter,
+  meshTextureData,
+  ensureMeshTextureData,
+  createTextureForMesh,
+  selectTexture,
+  applySelectedTexture,
+  resetTexture,
+  changeTextureResolution,
+  updateMaterialProperty,
+  saveToHistory,
+  undo,
+  redo
+} from "./js/TexturePainter.js";
 
 /* ---------------- WORKER & DATA CONFIG ---------------- */
 const WORKER_URL = "https://morphara.maroukayuob.workers.dev";
@@ -39,15 +52,28 @@ let texturePainter = null;
 let painterCanvas = null;
 let painterTargetMesh = null;
 let isPainting = false;
-
 let uvOverlayImage = null;
-let showUVOverlay = true; // later we’ll toggle this
+let showUVOverlay = true;
 let uvOpacity = 0.25;
-const paintedTextures = {};
+
+// Texture Painter V2 state (meshTextureData imported from TexturePainter.js)
+let currentPainterMesh = null;
+let currentTextureName = null;
+let maxAllowedResolution = 1024;
+let painterControls = null;
+
+// Brush cursor tracking
+let canvasMouseX = null;
+let canvasMouseY = null;
+
+const paintedTextures = {};  // Keep for backward compatibility
 const clock = new THREE.Clock();
 const blendShapeMap = {};
 const morphMeshes = [];
 const morphValues = {};
+
+// Track preview instances for cleanup
+const activePreviews = new Map(); // Map<containerId, preview>
 let equippedClothes = {
   shirts: null,
   pants: null,
@@ -100,11 +126,29 @@ function updateUserMenu(session) {
     userBtn.textContent = initial;
     userBtn.title = user.email;
 
-    // Rebuild menu with user info + logout
+    // Rebuild menu with user info + settings + logout
     menu.innerHTML = `
       <span class="user-email">${user.email}</span>
+      <button class="dropdown-item" id="settings-btn">⚙️ Settings</button>
       <button class="dropdown-item" id="logout-btn">Log Out</button>
     `;
+
+    document.getElementById("settings-btn").addEventListener("click", () => {
+      document.getElementById("user-menu").classList.add("hidden");
+      const so = document.getElementById("settings-overlay");
+      so.style.display = "flex";
+      // Populate email
+      const emailEl = document.getElementById("settings-email");
+      if (emailEl) emailEl.textContent = user.email;
+      // Populate plan
+      fetch(WORKER_URL + "/check-plan", {
+        headers: { "Authorization": "Bearer " + session.access_token }
+      }).then(r => r.json()).then(data => {
+        const names = { free: "Free", premium: "Premium", studio: "Studio" };
+        const planEl = document.getElementById("settings-plan");
+        if (planEl) planEl.textContent = names[data.plan] || "Free";
+      }).catch(() => {});
+    });
 
     document.getElementById("logout-btn").addEventListener("click", async () => {
       await supabase.auth.signOut();
@@ -188,7 +232,6 @@ async function fetchAndDisplayPlan(userId) {
   if (!badge) {
     badge = document.createElement("span");
     badge.id = "plan-badge";
-    badge.style.cssText = "font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;margin-left:4px;vertical-align:middle;";
     document.getElementById("user-btn")?.after(badge);
   }
 
@@ -398,7 +441,11 @@ function setUIMode(mode) {
   buildAnimationUI();
 }
 if(mode === "customize"){
-    buildBlendShapeUI();
+    buildCategorizedBlendShapesUI();
+}
+if(mode === "clothes")
+{
+  updateCategoryCounts(currentBaseMesh.id);
 }
 }
 
@@ -462,13 +509,19 @@ function buildBaseMeshUI() {
     name.className = "base-mesh-name";
     name.textContent = mesh.name;
 
-    card.append(preview, name);
+    // Add credit badge
+    const creditBadge = document.createElement("div");
+    creditBadge.className = "credit-badge";
+    creditBadge.textContent = mesh.priceCredits || 1;
+    
+    card.append(preview, name, creditBadge);
     panel.appendChild(card);
 
     // Fetch blob URL for preview thumbnail only — never cache blob URLs
     getAssetUrl("basemesh", mesh.r2Key).then(url => {
       preview.innerHTML = "";
-      createPreview({ container: preview, gltfPath: url });
+      const previewInstance = createPreview({ container: preview, gltfPath: url });
+      activePreviews.set(preview, previewInstance);
     }).catch(() => {
       preview.innerHTML = "<div style='color:#555;font-size:11px;text-align:center'>Preview unavailable</div>";
     });
@@ -494,6 +547,9 @@ async function loadBaseMesh(meshData, onLoaded = null) {
   document.querySelectorAll(".base-mesh-card").forEach(c => {
     c.classList.toggle("active", c.dataset.id === meshData.id);
   });
+
+  // Update category counts for this base mesh
+  updateCategoryCounts(meshData.r2Key);
 
   try {
     const url = await getAssetUrl("basemesh", meshData.r2Key);
@@ -616,48 +672,163 @@ function collectBlendShapesFromObject(root) {
 }
 
 /* ---------------- UI: BLEND SHAPES ---------------- */
-function buildBlendShapeUI() {
-  const panel = document.getElementById("blendshape-panel");
-  panel.innerHTML = "";
+// ============================================================================
+// BLEND SHAPE CATEGORIZATION SYSTEM
+// Add these functions to main.js
+// ============================================================================
 
-  const keys = Object.keys(blendShapeMap).sort();
+/**
+ * Categorize blend shapes by prefix (before underscore)
+ * Example: "Eyes_Width" → category "Eyes"
+ */
+function categorizeBlendShapes(blendShapeNames) {
+  const categories = {};
+  const specialCategories = ['Gender']; // Always first, highlighted
+  
+  blendShapeNames.forEach(name => {
+    let category = 'Other';
+    
+    // Check if it's a special category (exact match)
+    if (specialCategories.includes(name)) {
+      category = name;
+    } else if (name.includes('_')) {
+      // Extract prefix before underscore
+      category = name.split('_')[0];
+    }
+    
+    if (!categories[category]) {
+      categories[category] = [];
+    }
+    
+    categories[category].push(name);
+  });
+  
+  return categories;
+}
 
-  if (keys.length === 0) {
-    panel.innerHTML = `
-      <p style="color:#888;font-size:13px;">
-        This base mesh has no blendshapes.
-      </p>
-    `;
+function getBlendShapeCategoryIcon(categoryName) {
+  const baseUrl = 'icons/blend_shape/';
+  const iconName = categoryName.toLowerCase() + '.png';
+  return baseUrl + iconName;
+}
+
+function buildCategorizedBlendShapesUI() {
+  const panel = document.getElementById('blendshape-panel');
+  if (!panel) return;
+  
+  panel.innerHTML = '';
+  
+  // Get all blend shape names from blendShapeMap
+  const allNames = [];
+  for (const [name] of Object.entries(blendShapeMap)) {
+    allNames.push(name);
+    // Initialize morphValues if not set
+    if (morphValues[name] === undefined) {
+      morphValues[name] = 0;
+    }
+  }
+  
+  if (allNames.length === 0) {
+    panel.innerHTML = '<p style="color: #888; padding: 20px; text-align: center;">No blend shapes available</p>';
     return;
   }
-
-  keys.forEach(name => {
-    // 🔑 READ CURRENT VALUE FROM MESH
-    const entry = blendShapeMap[name][0];
-    const currentValue =
-      entry.mesh.morphTargetInfluences[entry.index] || 0;
-
-    morphValues[name] = currentValue;
-
-    const row = document.createElement("div");
-    row.className = "blend-row";
-
-    const label = document.createElement("label");
-    label.textContent = name;
-
-    const slider = document.createElement("input");
-    slider.type = "range";
-    slider.min = 0;
-    slider.max = 100;
-    slider.value = Math.round(currentValue * 100);
-
-    slider.oninput = () => {
-      morphValues[name] = slider.value / 100;
-    };
-
-    row.append(label, slider);
-    panel.appendChild(row);
+  
+  // Categorize
+  const categorized = categorizeBlendShapes(allNames);
+  
+  // Render Gender first (if exists)
+  if (categorized['Gender']) {
+    renderBlendShapeCategory(panel, 'Gender', categorized['Gender'], true);
+    delete categorized['Gender'];
+  }
+  
+  // Then render other categories alphabetically
+  const sortedCategories = Object.keys(categorized).sort();
+  sortedCategories.forEach(categoryName => {
+    renderBlendShapeCategory(panel, categoryName, categorized[categoryName], false);
   });
+  
+  console.log(`✅ Built categorized blend shapes: ${sortedCategories.length} categories`);
+}
+
+/**
+ * Render a single blend shape category panel
+ */
+function renderBlendShapeCategory(panel, categoryName, blendShapeNames, isSpecial = false) {
+  // Create category container
+  const categoryDiv = document.createElement('div');
+  categoryDiv.className = `blend-category${isSpecial ? ' special' : ''} collapsed`;
+  
+  // Create header
+  const header = document.createElement('div');
+  header.className = 'blend-category-header';
+  
+  const iconUrl = getBlendShapeCategoryIcon(categoryName);
+  
+  header.innerHTML = `
+    <img src="${iconUrl}" class="blend-category-icon" onerror="this.style.display='none'" alt="${categoryName}">
+    <span class="blend-category-name">${categoryName}</span>
+    <span class="blend-category-chevron">▼</span>
+  `;
+  
+  // Create content container
+  const content = document.createElement('div');
+  content.className = 'blend-category-content';
+  
+  // Add blend shape sliders to content
+  blendShapeNames.forEach(shapeName => {
+    const sliderItem = createBlendShapeSliderItem(shapeName);
+    content.appendChild(sliderItem);
+  });
+  
+  // Toggle collapse on header click
+  header.addEventListener('click', () => {
+    categoryDiv.classList.toggle('collapsed');
+  });
+  
+  // Assemble and add to panel
+  categoryDiv.appendChild(header);
+  categoryDiv.appendChild(content);
+  panel.appendChild(categoryDiv);
+}
+
+/**
+ * Create a blend shape slider item (individual slider)
+ */
+function createBlendShapeSliderItem(shapeName) {
+  const item = document.createElement('div');
+  item.className = 'blend-shape-item';
+  
+  const label = document.createElement('label');
+  label.className = 'blend-shape-label';
+  label.textContent = shapeName;
+  
+  const slider = document.createElement('input');
+  slider.type = 'range';
+  slider.className = 'blend-shape-slider';
+  slider.min = '0';
+  slider.max = '1';
+  slider.step = '0.01';
+  slider.value = morphValues[shapeName] || 0;
+  
+  slider.addEventListener('input', (e) => {
+    const value = parseFloat(e.target.value);
+    morphValues[shapeName] = value;
+    
+    // Apply to all meshes with this blend shape
+    if (blendShapeMap[shapeName]) {
+      blendShapeMap[shapeName].forEach(({ mesh, index }) => {
+        if (mesh.morphTargetInfluences) {
+          mesh.morphTargetInfluences[index] = value;
+        }
+      });
+    }
+  });
+  
+  item.appendChild(label);
+  item.appendChild(slider);
+  
+  return item;
 }
 
 /* ---------------- CLOTHES UI ---------------- */
@@ -679,6 +850,35 @@ clothesCategoryButtons.forEach(btn => {
     buildClothingList(category);
   });
 });
+
+// Update category counts based on current base mesh
+function updateCategoryCounts(baseMeshId) {
+  const categories = ["shirts", "jacket", "pants", "shoes", "gloves", "hair", "facialHair", "headwear", "glasses", "accessories"];
+  
+  categories.forEach(category => {
+    const count = CLOTHES.filter(c => 
+      c.baseMesh === baseMeshId && c.category === category
+    ).length;
+    
+    // Update the count span for this category
+    const button = document.querySelector(`.clothes-category[data-category="${category}"]`);
+    if (button) {
+      const countSpan = button.querySelector('.item-count');
+      if (countSpan) {
+        countSpan.textContent = `(${count})`;
+        
+        // Optional: dim button if no items
+        if (count === 0) {
+          button.style.opacity = '0.5';
+          button.style.cursor = 'default';
+        } else {
+          button.style.opacity = '1';
+          button.style.cursor = 'pointer';
+        }
+      }
+    }
+  });
+}
 
 function getClothesFor(baseMeshId, category) {
   return CLOTHES.filter(c =>
@@ -1260,14 +1460,122 @@ function exportAnimationAsGLTF(format) {
 }
 
 async function exportAsFBX() {
-  // FBX export feature - Coming in v0.1.1
-  showToast("FBX export available in Premium & Studio plans (coming in v0.1.1)");
-  return Promise.resolve();
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session?.access_token) {
+    showToast("Please sign in to export FBX");
+    return;
+  }
+
+  try {
+    showToast("Preparing FBX export...");
+
+    // Export current model as GLB first
+    const glbBlob = await new Promise((resolve, reject) => {
+      if (!currentModel) {
+        reject(new Error("No model loaded"));
+        return;
+      }
+
+      const exporter = new GLTFExporter();
+      const options = {
+        binary: true,
+        animations: mixer && mixer._actions ? Array.from(mixer._actions).map(a => a._clip) : [], // Export all animations
+        maxTextureSize: 4096
+      };
+
+      exporter.parse(
+        currentModel,
+        (result) => {
+          resolve(new Blob([result], { type: 'application/octet-stream' }));
+        },
+        (error) => reject(error),
+        options
+      );
+    });
+
+    console.log(`GLB prepared: ${(glbBlob.size / 1024).toFixed(2)} KB`);
+
+    // Send to conversion service
+    showToast("Converting to FBX (this may take 30-60 seconds)...");
+    
+    const formData = new FormData();
+    formData.append('file', glbBlob, 'character.glb');
+
+    const response = await fetch(`${WORKER_URL}/convert-to-fbx`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+        console.error('Worker error response:', errorData);
+        
+        // Check if credit was refunded
+        if (errorData.creditRefunded) {
+          showToast(`Export failed: ${errorData.error || 'Unknown error'}. Credit refunded.`, 4000);
+        } else {
+          showToast(`Export failed: ${errorData.error || 'Unknown error'}`, 3000);
+        }
+      } catch (e) {
+        console.error('Could not parse error:', e);
+        showToast('Export failed - server error');
+      }
+      return;
+    }
+
+    // Check response headers for metadata
+    const textureCount = response.headers.get('X-Textures-Count');
+    const fbxSize = response.headers.get('X-FBX-Size');
+    
+    console.log(`FBX exported: ${fbxSize ? (parseInt(fbxSize) / 1024).toFixed(2) + ' KB' : 'unknown size'}`);
+    console.log(`Textures included: ${textureCount || '0'}`);
+
+    // Download ZIP file (contains FBX + textures)
+    const zipBlob = await response.blob();
+    const filename = `character_${Date.now()}_fbx.zip`;
+    downloadBlob(zipBlob, filename);
+    
+    // Show success with details
+    const message = textureCount > 0 
+      ? `FBX exported! ${textureCount} texture${textureCount > 1 ? 's' : ''} included. Extract the ZIP to use.`
+      : "FBX exported successfully!";
+    
+    showToast(message, 4000);
+    
+    // Refresh credits display
+    const { data: userData } = await supabase
+      .from('users')
+      .select('credits')
+      .eq('id', session.user.id)
+      .single();
+    
+    if (userData) {
+      const creditsEl = document.getElementById('credits-count');
+      if (creditsEl) creditsEl.textContent = userData.credits;
+    }
+    
+  } catch (error) {
+    console.error('FBX export error:', error);
+    
+    // Check if error response indicates refund
+    if (error.message?.includes('creditRefunded')) {
+      showToast("Export failed. Credit refunded.", 3000);
+    } else {
+      showToast("Export failed. Please try again.", 2500);
+    }
+  }
 }
 
 async function exportAnimationAsFBX() {
-  // FBX animation export - Coming in v0.1.1
-  showToast("FBX export available in Premium & Studio plans (coming in v0.1.1)");
+  // Animation-only FBX export
+  showToast("Animation-only FBX export coming soon!");
+  // TODO: Implement animation-only export
   return Promise.resolve();
 }
 
@@ -1298,23 +1606,70 @@ window.selectExportType = function(type) {
   updateExportButton();
 };
 
-window.selectFormat = function(format) {
+window.selectFormat = async function(format, buttonElement) {
+  console.log('selectFormat called with:', format, 'button:', buttonElement);
+  
+  // Store the button reference BEFORE any async operations
+  const clickedButton = buttonElement;
+  
   // Check if FBX requires premium/studio
   if (format === 'fbx') {
-    // TODO: Add plan check when FBX is implemented in v0.1.1
-    // For now, just show coming soon message
-    showToast("FBX export coming in v0.1.1 - Premium & Studio feature");
-    return;
+    // Get current session
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session?.access_token) {
+      showToast("Please sign in to export FBX");
+      return;
+    }
+    
+    try {
+      const planResponse = await fetch(`${WORKER_URL}/check-plan`, {
+        headers: { 'Authorization': `Bearer ${session.access_token}` }
+      });
+      
+      if (planResponse.ok) {
+        const planData = await planResponse.json();
+        console.log('Plan data:', planData);
+        
+        if (!planData.features.fbxExport) {
+          showToast("FBX export not available for Free plan");
+          return;
+        }
+        
+        console.log('✅ FBX export allowed for user');
+      } else {
+        showToast("Failed to verify plan");
+        return;
+      }
+    } catch (error) {
+      console.error('Plan check failed:', error);
+      showToast("Failed to verify plan");
+      return;
+    }
   }
   
+  // If we got here, format is allowed - select it
+  console.log('Setting selectedFormat to:', format);
   selectedFormat = format;
+  
+  // Update button styles - clear all first
   document.querySelectorAll('.format-btn').forEach(btn => {
     btn.style.borderColor = 'transparent';
     btn.style.background = '#2a2a2a';
   });
-  event.currentTarget.style.borderColor = '#6c63ff';
-  event.currentTarget.style.background = '#3a3a3a';
+  
+  // Highlight the selected button
+  if (clickedButton) {
+    clickedButton.style.borderColor = '#6c63ff';
+    clickedButton.style.background = '#3a3a3a';
+    console.log('✅ Button highlighted');
+  } else {
+    console.warn('⚠️ No button reference');
+  }
+  
+  // Update the export button text
   updateExportButton();
+  console.log('✅ Export button updated');
 };
 
 function updateExportButton() {
@@ -1431,6 +1786,12 @@ function rebuildMaterialTargetsUI() {
       rebuildMaterialTargetsUI();
       syncMaterialUI();
       buildTextureGrid();
+      
+      // FIX: Update texture dropdown when switching materials
+      if (meshTextureData[key]) {
+        currentPainterMesh = key;
+        updateTextureUI(key);
+      }
     };
 
     materialTargetsContainer.appendChild(btn);
@@ -1717,14 +2078,14 @@ function buildAnimationUI() {
 
   items.forEach(anim => {
     const card = document.createElement("div");
-    card.className = "base-mesh-card";
+    card.className = "animation-card";
 
     const preview = document.createElement("div");
     preview.className = "preview-canvas";
     preview.innerHTML = "<div style='color:#555;font-size:11px;text-align:center;padding-top:30px'>...</div>";
 
     const label = document.createElement("div");
-    label.className = "base-mesh-name";
+    label.className = "animation-name";
     label.textContent = anim.name;
 
     card.append(preview, label);
@@ -1737,12 +2098,13 @@ function buildAnimationUI() {
       currentBaseMesh ? getAssetUrl("basemesh", currentBaseMesh.r2Key) : Promise.resolve(null)
     ]).then(([animUrl, baseMeshUrl]) => {
       preview.innerHTML = "";
-      createPreview({
+      const previewInstance = createPreview({
         container: preview,
         animationPath: animUrl,
         baseMeshPath: baseMeshUrl,
         autoRotate: false
       });
+      activePreviews.set(preview, previewInstance);
     }).catch(() => {
       preview.innerHTML = "<div style='color:#555;font-size:11px;text-align:center'>N/A</div>";
     });
@@ -1904,7 +2266,7 @@ function enterPainterMode() {
   document.getElementById("top-panel").classList.add("hidden");
   document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
   document.getElementById("clothes-items-panel")?.classList.remove("active");
-
+  painterControls = controls;
   // show painter
   painterMode.classList.remove("hidden");
 
@@ -1939,162 +2301,80 @@ function exitPainterMode() {
 
   onResize();
 }
-document
-  .getElementById("open-texture-painter")
-  .addEventListener("click", () => {
+document.getElementById("open-texture-painter").addEventListener("click", () => {
+  const target = materialTargets[activeMaterialTarget];
+  if (!target) {
+    alert("No material selected");
+    return;
+  }
 
-    const target = materialTargets[activeMaterialTarget];
-    if (!target) {
-      alert("No material selected");
-      return;
-    }
-
-    // FIRST mesh of the material target
-    painterTargetMesh = target.meshes[0];
-    if (!painterTargetMesh) {
-      alert("No mesh found for this material");
-      return;
-    }
-
-    const material = painterTargetMesh.material;
-    if (!material) {
-      alert("Mesh has no material");
-      return;
-    }
-
-    const key = activeMaterialTarget;
-
-    // ---------------------------------------
-    // CREATE OR RESTORE PAINT DATA PER TARGET
-    // ---------------------------------------
-
-    if (!paintedTextures[key]) {
-      // Create OFFSCREEN canvas (REAL texture)
-      const offscreenCanvas = document.createElement("canvas");
-      const PAINT_RESOLUTION = 1024;
-      offscreenCanvas.width = PAINT_RESOLUTION;
-      offscreenCanvas.height = PAINT_RESOLUTION;
-
-      const ctx = offscreenCanvas.getContext("2d");
-      ctx.fillStyle = "#ffffff";
-ctx.fillRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
-
-
-      // If material already has a texture, copy it ONCE
-      if (material.map?.image) {
-        try {
-          ctx.drawImage(
-            material.map.image,
-            0,
-            0,
-            offscreenCanvas.width,
-            offscreenCanvas.height
-          );
-        } catch (e) {
-          // ignore CORS or image errors
-        }
-      }
-
-      const texture = new THREE.CanvasTexture(offscreenCanvas);
-      texture.flipY = false;
-      texture.colorSpace = THREE.SRGBColorSpace;
-      texture.needsUpdate = true;
-      paintedTextures[key] = {
-        canvas: offscreenCanvas,
-        texture
-      };
-
-      material.map = texture;
-      material.needsUpdate = true;
-      showToast("Painter texture re-applied");
-    }
-
-    // ---------------------------------------
-    // RESTORE STORED CANVAS + TEXTURE
-    // ---------------------------------------
-
-    const { canvas: storedCanvas, texture } = paintedTextures[key];
-
-    material.map = texture;
-    material.needsUpdate = true;
-    painterCanvas = storedCanvas;
-
-    // ---------------------------------------
-    // CREATE PAINTER (NO TEXTURE OWNERSHIP)
-    // ---------------------------------------
-
-    texturePainter = new TexturePainter({
-      canvas: painterCanvas,
-      mesh: painterTargetMesh,
-      material,
-      texture
-    });
-
-    // ---------------------------------------
-    // SETUP CANVAS DRAW EVENTS (ONCE)
-    // ---------------------------------------
-
-    const uiCanvas = document.getElementById("texture-canvas");
-
-    // sync UI canvas size
-    uiCanvas.width = painterCanvas.width;
-    uiCanvas.height = painterCanvas.height;
-
-    let isPaintingLocal = false;
-
-uiCanvas.onpointerdown = e => {
-  const { x, y } = getTextureCoordsFromMouse(e, uiCanvas);
-
-  isPaintingLocal = true;
-  texturePainter.startDraw(x, y);
-};
-
-
-uiCanvas.onpointermove = e => {
-  if (!isPaintingLocal) return;
-
-  const { x, y } = getTextureCoordsFromMouse(e, uiCanvas);
-  texturePainter.draw(x, y);
-  updateTextureView();
-};
-
-
-    window.onpointerup = () => {
-      if (!isPaintingLocal) return;
-      isPaintingLocal = false;
-      texturePainter.endDraw();
-    };
-    texZoom = 1;
-    texOffsetX = 0;
-    texOffsetY = 0;
-// ---------------------------------------
-// LOAD UV OVERLAY (LOCKED PREVIEW)
-// ---------------------------------------
-
-uvOverlayImage = null;
-
-getUVMapForActiveTarget().then(uvPath => {
-  if (!uvPath) return;
-  const img = new Image();
-  img.crossOrigin = "anonymous";
-  img.src = uvPath;
-  img.onload = () => {
-    uvOverlayImage = img;
-    updateTextureView();
-  };
-});
-  showUVOverlay = true;
-  toggleUVBtn.classList.toggle("active", showUVOverlay);
-  uvOpacitySlider.value = uvOpacity ;
-    enterPainterMode();
-    updateTextureView();
-    texturePainter.setTool("draw");
-
-document.querySelectorAll(".tool-btn").forEach(b =>
-  b.classList.toggle("active", b.dataset.tool === "draw")
-);
-
+  // Get mesh ID
+  const meshId = activeMaterialTarget;
+  
+  // Ensure texture data exists for this mesh
+  ensureMeshTextureData(meshId, maxAllowedResolution);
+  
+  // Set current mesh
+  currentPainterMesh = meshId;
+  
+  // Get mesh data
+  const meshData = meshTextureData[meshId];
+  
+  // If no textures exist, create the first one
+  if (Object.keys(meshData.textures).length === 0) {
+    createTextureForMesh(meshId, 'custom_1', 'Custom Texture 1', true);
+    meshData.selectedTexture = 'custom_1';
+  }
+  
+  currentTextureName = meshData.selectedTexture;
+  
+  // Get the texture data
+  const texData = meshData.textures[currentTextureName];
+  
+  // Set painter canvas
+  painterCanvas = texData.canvas;
+  painterTargetMesh = target.meshes[0];
+  
+  // Create TexturePainter instance
+  texturePainter = new TexturePainter({
+    canvas: painterCanvas,
+    mesh: painterTargetMesh,
+    material: painterTargetMesh.material,
+    texture: texData.texture
   });
+  
+  // Sync color picker with current brush color
+  const currentColor = texturePainter.color || '#ffffff';
+  document.getElementById('paint-color').value = currentColor;
+  
+  // Update UI
+  updateTextureUI(meshId);
+  updateResetButtonState();
+  
+  // Load UV map
+  getUVMapForActiveTarget().then(uvPath => {
+    if (!uvPath) return;
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = uvPath;
+    img.onload = () => {
+      uvOverlayImage = img;
+      updateTextureView();
+    };
+  });
+  
+  showUVOverlay = true;
+  document.getElementById("toggle-uv").classList.toggle("active", showUVOverlay);
+  document.getElementById("uv-opacity").value = uvOpacity * 100;
+  
+  enterPainterMode();
+  updateTextureView();
+  texturePainter.setTool("draw");
+  
+  document.querySelectorAll(".tool-btn").forEach(b =>
+    b.classList.toggle("active", b.dataset.tool === "draw")
+  );
+});
 
 
 exitPainterBtn.addEventListener("click", exitPainterMode);
@@ -2106,20 +2386,22 @@ let isPanning = false;
 let panStartX = 0;
 let panStartY = 0;
 
-document.querySelectorAll(".tool-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    if (!texturePainter) return;
-
-    const tool = btn.dataset.tool;
-
-    // UI active state
-    document
-      .querySelectorAll(".tool-btn")
-      .forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-
-    // Tell painter
+document.querySelectorAll(".tool-btn").forEach(b => {
+  b.addEventListener('click', () => {
+    const tool = b.dataset.tool;
     texturePainter.setTool(tool);
+    
+    // Update active state
+    document.querySelectorAll(".tool-btn").forEach(btn =>
+      btn.classList.toggle("active", btn === b)
+    );
+    
+    // Enable/disable camera controls based on tool
+    if (tool === 'move' && painterControls) {
+      painterControls.enabled = true;
+    } else if (painterControls) {
+      painterControls.enabled = false;
+    }
   });
 });
 const paintColorInput = document.getElementById("paint-color");
@@ -2131,6 +2413,7 @@ const brushSizeInput = document.getElementById("brush-size");
 brushSizeInput.addEventListener("input", e => {
   if (!texturePainter) return;
   texturePainter.setBrushSize(parseInt(e.target.value, 10));
+  updateTextureView();  // Update cursor size preview
 });
 function updateTextureView() {
   // UI canvas (the visible one on the right)
@@ -2186,6 +2469,51 @@ if (showUVOverlay && uvOverlayImage) {
   uiCtx.restore();
 }
 }
+
+function drawBrushCursor(uiCanvas, uiCtx) {
+  if (!texturePainter || canvasMouseX === null || canvasMouseY === null) return;
+  
+  const tool = texturePainter.tool;
+  
+  // Different cursors for different tools
+  if (tool === "move") {
+    // Move tool uses native grab cursor
+    return;
+  }
+  
+  if (tool === "draw" || tool === "erase") {
+    // Draw circle showing brush size
+    const brushSize = texturePainter.brushSize || 10;
+    
+    uiCtx.save();
+    uiCtx.strokeStyle = tool === "erase" ? "#ff5555" : "#7c5cff";
+    uiCtx.lineWidth = 2;
+    uiCtx.setLineDash([4, 4]);
+    
+    // Draw circle at mouse position (in screen space, not texture space)
+    uiCtx.beginPath();
+    uiCtx.arc(canvasMouseX, canvasMouseY, brushSize * texZoom / 2, 0, Math.PI * 2);
+    uiCtx.stroke();
+    
+    uiCtx.restore();
+  } else if (tool === "bucket") {
+    // Draw crosshair for bucket tool
+    uiCtx.save();
+    uiCtx.strokeStyle = "#7c5cff";
+    uiCtx.lineWidth = 2;
+    
+    const size = 10;
+    uiCtx.beginPath();
+    uiCtx.moveTo(canvasMouseX - size, canvasMouseY);
+    uiCtx.lineTo(canvasMouseX + size, canvasMouseY);
+    uiCtx.moveTo(canvasMouseX, canvasMouseY - size);
+    uiCtx.lineTo(canvasMouseX, canvasMouseY + size);
+    uiCtx.stroke();
+    
+    uiCtx.restore();
+  }
+}
+
 function getTextureCoordsFromMouse(e, uiCanvas) {
   const rect = uiCanvas.getBoundingClientRect();
 
@@ -2247,6 +2575,120 @@ window.addEventListener("pointermove", e => {
 window.addEventListener("pointerup", () => {
   isPanning = false;
   uiCanvas.style.cursor = "grab";
+});
+
+// ============================================================================
+// TEXTURE PAINTER - DRAWING MOUSE EVENTS
+// ============================================================================
+
+let isPaintingLocal = false;
+let lastPaintX = null;
+let lastPaintY = null;
+
+// Mouse down - start painting
+uiCanvas.addEventListener("mousedown", (e) => {
+  if (e.button !== 0) return; // Only left click
+  if (!texturePainter) return;
+  
+  const tool = texturePainter.tool;
+  
+  // Move tool uses different behavior
+  if (tool === "move") {
+    isPanning = true;
+    panStartX = e.clientX;
+    panStartY = e.clientY;
+    uiCanvas.style.cursor = "grabbing";
+    return;
+  }
+  
+  // Get texture coordinates
+  const coords = getTextureCoordsFromMouse(e, uiCanvas);
+  if (!coords) return;
+  
+  // CRITICAL: Save history BEFORE painting starts (for undo)
+  if (currentPainterMesh && currentTextureName) {
+    saveToHistory(currentPainterMesh, currentTextureName);
+  }
+  
+  isPaintingLocal = true;
+  lastPaintX = coords.x;
+  lastPaintY = coords.y;
+  
+  // Start drawing on the actual texture canvas
+  texturePainter.startDraw(coords.x, coords.y);
+  
+  // Update view
+  updateTextureView();
+});
+
+// Mouse move - continue painting
+uiCanvas.addEventListener("mousemove", (e) => {
+  if (!texturePainter) return;
+  
+  const tool = texturePainter.tool;
+  
+  // Handle panning for move tool
+  if (tool === "move" && isPanning) {
+    texOffsetX += e.clientX - panStartX;
+    texOffsetY += e.clientY - panStartY;
+    panStartX = e.clientX;
+    panStartY = e.clientY;
+    updateTextureView();
+    return;
+  }
+  
+  // Handle painting
+  if (!isPaintingLocal) return;
+  
+  const coords = getTextureCoordsFromMouse(e, uiCanvas);
+  if (!coords) return;
+  
+  // Draw on texture canvas
+  texturePainter.draw(coords.x, coords.y);
+  
+  lastPaintX = coords.x;
+  lastPaintY = coords.y;
+  
+  // Update view
+  updateTextureView();
+});
+
+// Mouse up - stop painting
+uiCanvas.addEventListener("mouseup", (e) => {
+  if (e.button !== 0) return;
+  
+  if (texturePainter?.tool === "move") {
+    isPanning = false;
+    uiCanvas.style.cursor = "grab";
+  }
+  
+  if (isPaintingLocal && texturePainter) {
+    texturePainter.endDraw();
+    isPaintingLocal = false;
+    lastPaintX = null;
+    lastPaintY = null;
+    updateTextureView();
+  }
+});
+
+// Mouse leave - stop painting
+uiCanvas.addEventListener("mouseleave", () => {
+  if (isPaintingLocal && texturePainter) {
+    texturePainter.endDraw();
+    isPaintingLocal = false;
+    lastPaintX = null;
+    lastPaintY = null;
+  }
+  
+  if (isPanning) {
+    isPanning = false;
+    uiCanvas.style.cursor = "grab";
+  }
+  
+  // Clear cursor position
+  canvasMouseX = null;
+  canvasMouseY = null;
+  updateTextureView();
 });
 
 function showToast(message, duration = 1500) {
@@ -2344,7 +2786,7 @@ document.addEventListener("click", () => {
 
 const launchOverlay = document.getElementById("launch-overlay");
 const closeLaunch = document.getElementById("close-launch");
-const launchCTA = document.querySelector("#launch-overlay .open-plans");
+const launchSignupBtn = document.querySelector("#launch-signup-btn");
 
 if (launchOverlay && closeLaunch) {
 
@@ -2361,15 +2803,20 @@ if (launchOverlay && closeLaunch) {
 
   closeLaunch.addEventListener("click", closeLaunchOverlay);
   
-  if (launchCTA) {
-    launchCTA.addEventListener("click", () => {
+  if (launchSignupBtn) {
+    launchSignupBtn.addEventListener("click", () => {
       closeLaunchOverlay();
 
-      // Open plans overlay manually
-      const plansOverlay = document.getElementById("plans-overlay");
-      if (plansOverlay) {
-        plansOverlay.classList.remove("hidden");
+      // Open signup modal
+      const authOverlay = document.getElementById("auth-overlay");
+      if (authOverlay) {
+        authOverlay.classList.remove("hidden");
         document.body.style.overflow = "hidden";
+        // Switch to signup tab
+        document.querySelectorAll("[data-auth-tab]").forEach(t => t.classList.remove("active"));
+        document.querySelectorAll(".auth-panel").forEach(p => p.classList.remove("active"));
+        document.querySelector("[data-auth-tab='signup']")?.classList.add("active");
+        document.getElementById("signup-panel")?.classList.add("active");
       }
     });
   }
@@ -2456,16 +2903,6 @@ authSubmit.addEventListener("click", async () => {
 
 // ================= OAUTH =================
 
-document.getElementById("google-auth").addEventListener("click", async () => {
-  await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: window.location.origin
-    }
-  });
-});
-
-
 document.getElementById("github-auth").addEventListener("click", async () => {
   await supabase.auth.signInWithOAuth({
     provider: "github",
@@ -2474,6 +2911,250 @@ document.getElementById("github-auth").addEventListener("click", async () => {
     }
   });
 });
+
+// ================= SETTINGS OVERLAY =================
+
+const settingsOverlay = document.getElementById("settings-overlay");
+const closeSettingsBtn = document.getElementById("close-settings");
+
+if (closeSettingsBtn) {
+  closeSettingsBtn.addEventListener("click", () => {
+    settingsOverlay.style.display = "none";
+  });
+}
+
+// Close on backdrop click
+settingsOverlay?.addEventListener("click", (e) => {
+  if (e.target === settingsOverlay) settingsOverlay.style.display = "none";
+});
+
+// Cancel Subscription
+document.getElementById("cancel-subscription-btn")?.addEventListener("click", async () => {
+  if (!confirm("Are you sure you want to cancel your subscription? You'll lose access to Premium features at the end of your billing period.")) {
+    return;
+  }
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    // Call worker to cancel subscription
+    const response = await fetch(`${WORKER_URL}/cancel-subscription`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      const msg = result.expiryDate
+        ? `Subscription cancelled. Access continues until ${result.expiryDate}.`
+        : "Subscription cancelled. Access continues until end of billing period.";
+      showToast(msg, 4000);
+      settingsOverlay.style.display = "none";
+      // Refresh plan badge to show it's cancelling
+      const { data: { session: s } } = await supabase.auth.getSession();
+      if (s) await fetchAndDisplayPlan(s.user.id);
+    } else {
+      const error = await response.json();
+      showToast(`Failed to cancel: ${error.error || 'Unknown error'}`);
+    }
+  } catch (error) {
+    console.error('Cancel subscription error:', error);
+    showToast("Failed to cancel subscription");
+  }
+});
+
+// Delete Account (Disable)
+document.getElementById("delete-account-btn")?.addEventListener("click", async () => {
+  const confirmed = prompt('Type "DELETE" to confirm account deletion:');
+  
+  if (confirmed !== "DELETE") {
+    showToast("Account deletion cancelled");
+    return;
+  }
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    // Call worker to disable account
+    const response = await fetch(`${WORKER_URL}/disable-account`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      showToast("Account disabled. Signing you out...");
+      setTimeout(async () => {
+        await supabase.auth.signOut();
+        settingsOverlay.style.display = "none";
+      }, 2000);
+    } else {
+      const error = await response.json();
+      showToast(`Failed to disable account: ${error.error || 'Unknown error'}`);
+    }
+  } catch (error) {
+    console.error('Delete account error:', error);
+    showToast("Failed to disable account");
+  }
+});
+
 supabase.auth.onAuthStateChange((event, session) => {
   updateUserMenu(session ?? null);
+});
+// ============================================================================
+// TEXTURE PAINTER V2 - INIT & EVENT LISTENERS (data/undo/redo in TexturePainter.js)
+// ============================================================================
+
+async function initializeTexturePainterV2() {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      const response = await fetch(`${WORKER_URL}/check-plan`, {
+        headers: { 'Authorization': `Bearer ${session.access_token}` }
+      });
+      const data = await response.json();
+      const plan = data.plan || 'free';
+
+      if (plan === 'studio') {
+        maxAllowedResolution = 4096;
+        document.querySelector('#texture-resolution-select option[value="2048"]').disabled = false;
+        document.querySelector('#texture-resolution-select option[value="4096"]').disabled = false;
+      } else if (plan === 'premium') {
+        maxAllowedResolution = 2048;
+        document.querySelector('#texture-resolution-select option[value="2048"]').disabled = false;
+      } else {
+        maxAllowedResolution = 1024;
+        document.getElementById('resolution-upgrade-hint').style.display = 'block';
+      }
+    }
+  } catch (err) {
+    console.error('Failed to check plan:', err);
+  }
+
+  setupTexturePainterListeners();
+}
+
+function setupTexturePainterListeners() {
+  // Resolution
+  document.getElementById('texture-resolution-select')
+    .addEventListener('change', async (e) => {
+      const newRes = parseInt(e.target.value);
+      if (!currentPainterMesh) { showToast('No mesh selected'); e.target.value = 1024; return; }
+      if (newRes > maxAllowedResolution) { showToast('Upgrade for higher resolutions'); e.target.value = maxAllowedResolution; return; }
+      if (isPainterMode) { showToast('Exit texture painter before changing resolution'); e.target.value = meshTextureData[currentPainterMesh]?.resolution || 1024; return; }
+      await changeTextureResolution(currentPainterMesh, newRes, materialTargets);
+      showToast(`Resolution changed to ${newRes}x${newRes}`);
+    });
+
+  // Active texture selector
+  document.getElementById('active-texture-select')
+    .addEventListener('change', (e) => {
+      if (!currentPainterMesh) return;
+      selectTexture(currentPainterMesh, e.target.value, materialTargets, (name) => {
+        currentTextureName = name;
+        updateTextureUI(currentPainterMesh);
+        showToast(`Switched to ${meshTextureData[currentPainterMesh].textures[name].name}`);
+      });
+    });
+
+  // Create new texture
+  document.getElementById('create-new-texture-btn')
+    .addEventListener('click', () => {
+      if (!currentPainterMesh) { showToast('No mesh selected'); return; }
+      const meshData = meshTextureData[currentPainterMesh];
+      let counter = Object.keys(meshData.textures).filter(k => k.startsWith('custom_')).length + 1;
+      const newName = `custom_${counter}`;
+      createTextureForMesh(currentPainterMesh, newName, `Custom Texture ${counter}`, true);
+      selectTexture(currentPainterMesh, newName, materialTargets, (name) => {
+        currentTextureName = name;
+        updateTextureUI(currentPainterMesh);
+        showToast(`Created Custom Texture ${counter}`);
+      });
+    });
+
+  // Reset texture
+  document.getElementById('reset-texture-btn')
+    .addEventListener('click', () => {
+      if (!currentPainterMesh || !currentTextureName) return;
+      const texData = meshTextureData[currentPainterMesh]?.textures[currentTextureName];
+      if (!texData?.isCustom) { showToast('Cannot reset preset textures'); return; }
+      if (confirm('Reset this texture? This will clear all painting.')) {
+        resetTexture(currentPainterMesh, currentTextureName);
+        updateTextureView();
+        showToast('Texture reset');
+      }
+    });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (!isPainterMode) return;
+    if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(currentPainterMesh, currentTextureName, () => updateTextureView()); }
+    if (e.ctrlKey && e.key === 'y') { e.preventDefault(); redo(currentPainterMesh, currentTextureName, () => updateTextureView()); }
+  });
+
+  // Roughness
+  document.getElementById('roughness-slider').addEventListener('input', (e) => {
+    const value = parseFloat(e.target.value);
+    document.getElementById('roughness-value').textContent = value.toFixed(2);
+    if (currentPainterMesh && currentTextureName)
+      updateMaterialProperty(currentPainterMesh, currentTextureName, 'roughness', value, materialTargets);
+  });
+
+  // Metalness
+  document.getElementById('metalness-slider').addEventListener('input', (e) => {
+    const value = parseFloat(e.target.value);
+    document.getElementById('metalness-value').textContent = value.toFixed(2);
+    if (currentPainterMesh && currentTextureName)
+      updateMaterialProperty(currentPainterMesh, currentTextureName, 'metalness', value, materialTargets);
+  });
+}
+
+function updateTextureUI(meshId) {
+  const meshData = meshTextureData[meshId];
+  if (!meshData) return;
+
+  const select = document.getElementById('active-texture-select');
+  select.innerHTML = '';
+
+  if (Object.keys(meshData.textures).length === 0) {
+    const opt = document.createElement('option');
+    opt.value = ''; opt.textContent = 'No textures (click + to create)';
+    select.appendChild(opt);
+  } else {
+    Object.entries(meshData.textures).forEach(([key, texData]) => {
+      const opt = document.createElement('option');
+      opt.value = key; opt.textContent = texData.name;
+      if (key === meshData.selectedTexture) opt.selected = true;
+      select.appendChild(opt);
+    });
+  }
+
+  updateResetButtonState();
+  document.getElementById('texture-resolution-select').value = meshData.resolution;
+
+  const texData = meshData.textures[meshData.selectedTexture];
+  if (texData) {
+    document.getElementById('roughness-slider').value    = texData.roughness || 0.5;
+    document.getElementById('roughness-value').textContent = (texData.roughness || 0.5).toFixed(2);
+    document.getElementById('metalness-slider').value    = texData.metalness || 0.0;
+    document.getElementById('metalness-value').textContent = (texData.metalness || 0.0).toFixed(2);
+  }
+}
+
+function updateResetButtonState() {
+  const resetBtn = document.getElementById('reset-texture-btn');
+  if (!currentPainterMesh || !currentTextureName) { resetBtn.disabled = true; return; }
+  const texData = meshTextureData[currentPainterMesh]?.textures[currentTextureName];
+  resetBtn.disabled = !texData?.isCustom;
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  initializeTexturePainterV2();
 });

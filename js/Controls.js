@@ -22,8 +22,12 @@ window._PRICES = PRICES;
 // supabase imported from main.js — single shared instance
 
 /* ================================================================
-   STRIPE CHECKOUT
+   STRIPE CHECKOUT / UPGRADE
 ================================================================ */
+
+// Plan tier order for upgrade detection
+const PLAN_TIER = { free: 0, premium: 1, studio: 2 };
+
 async function startCheckout(priceKey) {
   const price = PRICES[priceKey];
   if (!price) { console.error("Unknown price key:", priceKey); return; }
@@ -38,22 +42,127 @@ async function startCheckout(priceKey) {
     return;
   }
 
-  // Prevent buying the same subscription plan they already have
-  if (price.mode === "subscription") {
-    const currentPlan = window._currentPlan || "free";
-    const isPremiumKey = priceKey.startsWith("premium");
-    const isStudioKey  = priceKey.startsWith("studio");
+  const currentPlan = window._currentPlan || "free";
 
-    if ((isPremiumKey && currentPlan === "premium") || (isStudioKey && currentPlan === "studio")) {
-      showToastGlobal(`You're already on the ${price.label.split(" ")[0]} plan!`);
+  // ── Subscription plan button clicked ──
+  if (price.mode === "subscription") {
+    const targetPlan = priceKey.startsWith("studio") ? "studio" : "premium";
+
+    // Already on this exact plan
+    if (targetPlan === currentPlan) {
+      showToastGlobal(`You're already on the ${targetPlan} plan!`);
       return;
     }
+
+    // UPGRADE: user is on a paid plan and wants a higher tier
+    if (PLAN_TIER[currentPlan] > 0 && PLAN_TIER[targetPlan] > PLAN_TIER[currentPlan]) {
+      await handleUpgrade(priceKey, price, session, currentPlan, targetPlan);
+      return;
+    }
+
+    // DOWNGRADE: not supported inline — guide them
+    if (PLAN_TIER[currentPlan] > 0 && PLAN_TIER[targetPlan] < PLAN_TIER[currentPlan]) {
+      showToastGlobal("To downgrade, cancel your current plan first — your access continues until the billing period ends.");
+      return;
+    }
+
+    // FREE → PAID: normal Stripe Checkout flow
   }
 
-  // Show loading on button
+  // ── Normal checkout (new sub or credit purchase) ──
+  await runCheckout(price, session);
+}
+
+async function handleUpgrade(priceKey, price, session, currentPlan, targetPlan) {
+  // Show confirmation dialog with proration explanation
+  const confirmed = confirm(
+    `Upgrade from ${currentPlan.toUpperCase()} → ${targetPlan.toUpperCase()}?\n\n` +
+    `• Your card will be charged the prorated difference immediately\n` +
+    `• You'll receive bonus credits for the rest of this billing period\n` +
+    `• Your next renewal will be at the ${targetPlan} price\n\n` +
+    `Proceed?`
+  );
+  if (!confirmed) return;
+
   const btn = document.activeElement;
   const originalText = btn?.textContent;
-  if (btn && btn.classList.contains("plan-btn")) {
+  if (btn?.classList.contains("plan-btn")) {
+    btn.disabled    = true;
+    btn.textContent = "Upgrading...";
+  }
+
+  try {
+    const res = await fetch(`${WORKER_URL}/upgrade-subscription`, {
+      method:  "POST",
+      headers: {
+        "Content-Type":  "application/json",
+        "Authorization": `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({ newPriceId: price.priceId })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      showToastGlobal(data.error || "Upgrade failed — please try again");
+      if (btn) { btn.disabled = false; btn.textContent = originalText; }
+      return;
+    }
+
+    // 3D Secure / requires further action
+    if (data.requiresAction && data.clientSecret) {
+      showToastGlobal("Additional payment verification required — redirecting...");
+      // If you have Stripe.js loaded, confirm the payment:
+      // const stripe = Stripe(YOUR_PUBLISHABLE_KEY);
+      // await stripe.confirmCardPayment(data.clientSecret);
+      // For now, send them to billing portal as fallback
+      window.open("https://billing.stripe.com/p/login", "_blank");
+      if (btn) { btn.disabled = false; btn.textContent = originalText; }
+      return;
+    }
+
+    // Success — update local state immediately
+    window._currentPlan = data.newPlan;
+
+    showToastGlobal(
+      `🎉 Upgraded to ${data.newPlan.toUpperCase()}! ` +
+      (data.creditsAdded > 0 ? `+${data.creditsAdded} credits added.` : "")
+    );
+
+    // Refresh plan display + credits
+    setTimeout(async () => {
+      if (typeof window.fetchAndDisplayPlan === "function") {
+        const { data: { session: s } } = await supabase.auth.getSession();
+        if (s) await window.fetchAndDisplayPlan(s.user.id);
+      }
+
+      // Refresh credits count
+      const { data: credData } = await supabase
+        .from("users")
+        .select("credits")
+        .eq("id", session.user.id)
+        .single();
+      if (credData) {
+        const el = document.getElementById("credits-count");
+        if (el) el.textContent = credData.credits;
+      }
+
+      // Close plans overlay
+      document.getElementById("plans-overlay")?.classList.add("hidden");
+      document.body.style.overflow = "";
+    }, 500);
+
+  } catch (err) {
+    console.error("Upgrade error:", err);
+    showToastGlobal("Connection error — please try again");
+    if (btn) { btn.disabled = false; btn.textContent = originalText; }
+  }
+}
+
+async function runCheckout(price, session) {
+  const btn = document.activeElement;
+  const originalText = btn?.textContent;
+  if (btn?.classList.contains("plan-btn")) {
     btn.disabled    = true;
     btn.textContent = "Loading...";
   }
@@ -61,10 +170,7 @@ async function startCheckout(priceKey) {
   try {
     const res = await fetch(`${WORKER_URL}/create-checkout`, {
       method:  "POST",
-      headers: {
-        "Content-Type":  "application/json",
-        "Authorization": `Bearer ${session.access_token}`
-      },
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
       body: JSON.stringify({
         priceId:   price.priceId,
         userId:    session.user.id,
