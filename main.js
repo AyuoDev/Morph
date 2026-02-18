@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import { GLTFLoader } from "https://unpkg.com/three@0.158.0/examples/jsm/loaders/GLTFLoader.js";
-import { OrbitControls } from "https://unpkg.com/three@0.158.0/examples/jsm/controls/OrbitControls.js";
-import { GLTFExporter } from "https://unpkg.com/three@0.158.0/examples/jsm/exporters/GLTFExporter.js";
+import { GLTFLoader } from "https://esm.sh/three@0.158.0/examples/jsm/loaders/GLTFLoader.js";
+import { OrbitControls } from "https://esm.sh/three@0.158.0/examples/jsm/controls/OrbitControls.js";
+import { GLTFExporter } from "https://esm.sh/three@0.158.0/examples/jsm/exporters/GLTFExporter.js";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 import { initPlansOverlayControls } from "./js/Controls.js";
