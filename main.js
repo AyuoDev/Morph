@@ -99,15 +99,46 @@ const SUPABASE_URL = "https://yjrqcmzkmfawwsppmnkl.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_fIkpyaJmmkNhcB1HOeRrKw_xZ0c0miD";
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* ---------------- POSTHOG TRACKING ---------------- */
+let sessionStartTime = Date.now();
+
 let loadedClothingMeshes = {};
 
 /* ---------------- Auth State ------------*/
 
 async function checkSession() {
   const { data: { session } } = await supabase.auth.getSession();
+  
+  // Track app loaded
+  if (window.posthog) {
+    posthog.capture('app_loaded', {
+      url: window.location.href,
+      referrer: document.referrer,
+      user_agent: navigator.userAgent,
+      screen_width: window.innerWidth,
+      screen_height: window.innerHeight
+    });
+  }
+  
   if (session) {
+    // Track authenticated session
+    if (window.posthog) {
+      posthog.identify(session.user.id, {
+        email: session.user.email,
+        user_id: session.user.id
+      });
+      posthog.capture('session_started', {
+        user_id: session.user.id
+      });
+    }
     updateUserMenu(session);
     showToast("Welcome back 🎉");
+  } else {
+    // Track guest session
+    if (window.posthog) {
+      posthog.capture('session_guest');
+    }
   }
 }
 
@@ -134,6 +165,9 @@ function updateUserMenu(session) {
     `;
 
     document.getElementById("settings-btn").addEventListener("click", () => {
+      if (window.posthog) {
+        posthog.capture('settings_opened');
+      }
       document.getElementById("user-menu").classList.add("hidden");
       const so = document.getElementById("settings-overlay");
       so.style.display = "flex";
@@ -151,6 +185,12 @@ function updateUserMenu(session) {
     });
 
     document.getElementById("logout-btn").addEventListener("click", async () => {
+      if (window.posthog) {
+        const sessionDuration = Date.now() - sessionStartTime;
+        posthog.capture('logout_clicked', {
+          session_duration_ms: sessionDuration
+        });
+      }
       await supabase.auth.signOut();
       // onAuthStateChange will fire and call updateUserMenu(null)
     });
@@ -447,6 +487,22 @@ if(mode === "clothes")
 {
   updateCategoryCounts(currentBaseMesh.id);
 }
+
+  // Track panel opened
+  if (window.posthog) {
+    const eventMap = {
+      'base': 'base_mesh_panel_opened',
+      'clothes': 'clothing_panel_opened',
+      'customize': 'blendshape_panel_opened',
+      'materials': 'material_panel_opened',
+      'animations': 'animation_panel_opened',
+      'randomizer': 'randomizer_panel_opened'
+    };
+    
+    if (eventMap[mode]) {
+      posthog.capture(eventMap[mode], { panel: mode });
+    }
+  }
 }
 
 /* ---------------- BOOT ---------------- */
@@ -459,7 +515,6 @@ loadAllAssets(); // fetches from Supabase then builds UI
 /* ---------------- INIT ---------------- */
 
 function init() {
-
   //
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x1e1e1e);
@@ -540,6 +595,15 @@ function buildBaseMeshUI() {
 async function loadBaseMesh(meshData, onLoaded = null) {
   if (!meshData) return;
 
+  // Track base mesh clicked
+  if (window.posthog) {
+    posthog.capture('base_mesh_clicked', {
+      mesh_id: meshData.id,
+      mesh_name: meshData.name,
+      mesh_key: meshData.r2Key
+    });
+  }
+
   resetClothingUI();
   currentBaseMesh = meshData;
 
@@ -557,12 +621,32 @@ async function loadBaseMesh(meshData, onLoaded = null) {
       url,
       gltf => {
         onModelLoaded(gltf);
+        
+        // Track successful load
+        if (window.posthog) {
+          posthog.capture('base_mesh_loaded', {
+            mesh_id: meshData.id,
+            mesh_name: meshData.name,
+            success: true
+          });
+        }
+        
         if (onLoaded) onLoaded(); // resolve promise for randomizer await
       },
       undefined,
       err => {
         console.error("Failed to load GLB:", err?.message || err);
         showToast("Failed to load mesh — please try again");
+        
+        // Track load failure
+        if (window.posthog) {
+          posthog.capture('base_mesh_load_failed', {
+            mesh_id: meshData.id,
+            mesh_name: meshData.name,
+            error: err?.message || 'Unknown error'
+          });
+        }
+        
         currentBaseMesh = null;
         if (onLoaded) onLoaded();
       }
@@ -840,6 +924,15 @@ const clothesItemsPanel = document.getElementById("clothes-items-panel");
 clothesCategoryButtons.forEach(btn => {
   btn.addEventListener("click", () => {
     const category = btn.dataset.category;
+    
+    // Track category click
+    if (window.posthog) {
+      posthog.capture('clothing_category_clicked', {
+        category: category,
+        base_mesh: currentBaseMesh?.name || 'none',
+        item_count: CLOTHES.filter(c => c.baseMesh === currentBaseMesh?.r2Key && c.category === category).length
+      });
+    }
 
     clothesCategoryButtons.forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
@@ -974,6 +1067,16 @@ panel.appendChild(noneCard);
   }
 }
 async function equipClothing(item) {
+  // Track item clicked
+  if (window.posthog) {
+    posthog.capture('clothing_item_clicked', {
+      item_id: item.id,
+      item_name: item.name,
+      category: item.category,
+      is_premium: item.priceCredits > 0
+    });
+  }
+  
   // Unequip existing
   if (equippedClothes[item.category]) {
     unequipClothing(item.category);
@@ -993,6 +1096,17 @@ async function equipClothing(item) {
     gltf = await loader.loadAsync(item.path);
   } catch(err) {
     console.error("Failed to load clothing GLB:", err?.message || err);
+    
+    // Track equip failure
+    if (window.posthog) {
+      posthog.capture('clothing_equip_failed', {
+        item_id: item.id,
+        item_name: item.name,
+        category: item.category,
+        error: err?.message || 'Unknown error'
+      });
+    }
+    
     showToast("Failed to load item — please try again");
     return;
   }
@@ -1032,6 +1146,17 @@ Object.entries(morphValues).forEach(([name, value]) => {
   materialDomain: item.materialDomain || "fabric",
   clothing: item  // Store clothing reference for UV map access
 };
+
+  // Track successful equip
+  if (window.posthog) {
+    posthog.capture('clothing_equipped', {
+      item_id: item.id,
+      item_name: item.name,
+      category: item.category,
+      base_mesh: currentBaseMesh?.name,
+      is_premium: item.priceCredits > 0
+    });
+  }
 }
 function getFirstSkinnedMesh(root) {
   let found = null;
@@ -1146,12 +1271,16 @@ const exportBtn = document.getElementById("export-btn");
 
 if (exportBtn) {
   exportBtn.addEventListener("click", async () => {
-  if (!currentModel) {
-    showToast("Load a character first!");
-    return;
-  }
+    // Track export panel opened
+    if (window.posthog) {
+      posthog.capture('export_panel_opened', {
+        base_mesh: currentBaseMesh?.name,
+        has_clothes: Object.values(equippedClothes).some(c => c !== null),
+        has_animation: activeAction !== null
+      });
+    }
 
-  const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
     showToast("Sign in to export");
     document.getElementById("auth-overlay").classList.remove("hidden");
@@ -1265,6 +1394,17 @@ document.getElementById("export-panel-close")?.addEventListener("click", () => {
 });
 
 async function handleExport(type, format) {
+  const exportStartTime = Date.now();
+  
+  // Track export initiated
+  if (window.posthog) {
+    posthog.capture('export_initiated', {
+      type: type,
+      format: format,
+      base_mesh: currentBaseMesh?.name
+    });
+  }
+
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return;
 
@@ -2278,12 +2418,15 @@ function enterPainterMode() {
   onResize();
 }
 function exitPainterMode() {
-    if (texturePainter) {
-    texturePainter = null;
+  // Track painter closed
+  if (window.posthog) {
+    const paintDuration = Date.now() - (window.painterStartTime || Date.now());
+    posthog.capture('painter_closed', {
+      duration_ms: paintDuration,
+      strokes_count: window.painterStrokesCount || 0
+    });
   }
 
-  painterTargetMesh = null;
-  painterCanvas = null;
   isPainterMode = false;
 
   // restore renderer
@@ -2934,6 +3077,11 @@ document.getElementById("cancel-subscription-btn")?.addEventListener("click", as
     return;
   }
 
+  // Track cancellation attempt
+  if (window.posthog) {
+    posthog.capture('subscription_cancel_clicked');
+  }
+
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
@@ -2949,6 +3097,13 @@ document.getElementById("cancel-subscription-btn")?.addEventListener("click", as
 
     if (response.ok) {
       const result = await response.json();
+        
+        // Track successful cancellation
+        if (window.posthog) {
+          posthog.capture('subscription_cancelled', {
+            user_id: session.user.id
+          });
+        }
       const msg = result.expiryDate
         ? `Subscription cancelled. Access continues until ${result.expiryDate}.`
         : "Subscription cancelled. Access continues until end of billing period.";
