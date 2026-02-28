@@ -380,16 +380,35 @@ async function loadAllAssets() {
                            "accessories","headwear","glasses","facialHair","jacket"];
     CLOTHES = assets
       .filter(a => clothingTypes.includes(a.type))
-      .map(a => ({
-        id:             a.id,
-        name:           a.name,
-        category:       a.type,       // type = bucket = category
-        baseMesh:       a.compatible_mesh,
-        r2Key:          a.r2_key,
-        materialDomain: "fabric",     // default; override per-item if needed
-        priceCredits:   a.price_credits ?? 0,
-        uv_map:         a.uv_map       // UV map filename for texture painter
-      }));
+      .map(a => {
+        // Assign material domain based on category
+        let materialDomain = "fabric"; // default
+        
+        if (a.type === "hair" || a.type === "facialHair") {
+          materialDomain = "hair";
+        } else if (a.type === "glasses") {
+          materialDomain = "glass";
+        } else if (a.type === "accessories") {
+          // Accessories can be metal, leather, or fabric
+          materialDomain = "metal"; // Default to metal, can be overridden per-item
+        } else if (a.type === "shoes") {
+          materialDomain = "leather"; // Shoes typically leather
+        } else {
+          // shirts, pants, gloves, jacket, headwear = fabric
+          materialDomain = "fabric";
+        }
+        
+        return {
+          id:             a.id,
+          name:           a.name,
+          category:       a.type,       // type = bucket = category
+          baseMesh:       a.compatible_mesh,
+          r2Key:          a.r2_key,
+          materialDomain: materialDomain,
+          priceCredits:   a.price_credits ?? 0,
+          uv_map:         a.uv_map       // UV map filename for texture painter
+        };
+      });
 
     // ── Animations ──
     ANIMATIONS = assets
@@ -402,18 +421,33 @@ async function loadAllAssets() {
         loop:     true
       }));
 
-    // ── Textures → grouped by domain (compatible_mesh = domain name) ──
-    const textureAssets = assets.filter(a => a.type === "textures");
-    TEXTURE_PRESETS = {};
-    for (const t of textureAssets) {
-      const domain = t.compatible_mesh || "fabric";
-      if (!TEXTURE_PRESETS[domain]) TEXTURE_PRESETS[domain] = [];
-      TEXTURE_PRESETS[domain].push({
-        id:     t.id,
-        label:  t.name,
-        r2Key:  t.r2_key,
-        map:    null // loaded on demand via getAssetUrl
-      });
+    // ── Textures → fetched from dedicated textures table, grouped by domain ──
+    const { data: textureAssets, error: textureError } = await supabase
+      .from("textures")
+      .select("*")
+      .order("name");
+    
+    if (textureError) {
+      console.error("Failed to load textures:", textureError);
+    } else {
+      TEXTURE_PRESETS = {};
+      for (const t of textureAssets) {
+        const domain = t.material_domain || "fabric"; // Use material_domain from textures table
+        if (!TEXTURE_PRESETS[domain]) TEXTURE_PRESETS[domain] = [];
+        
+        TEXTURE_PRESETS[domain].push({
+          id:              t.id,
+          label:           t.name,
+          r2Key:           t.r2_key,           // Diffuse/Albedo
+          r2KeyNormal:     t.r2_key_normal,    // Normal map
+          r2KeyMetallic:   t.r2_key_metallic,  // Metallic map
+          r2KeyRoughness:  t.r2_key_roughness, // Roughness map
+          r2KeyAO:         t.r2_key_ao,        // Ambient Occlusion
+          compatibleMesh:  t.compatible_mesh,  // "realistic_human", "midpoly_male", "all"
+          isPremium:       t.is_premium,       // Premium texture flag
+          map:             null // loaded on demand via getAssetUrl
+        });
+      }
     }
 
     // Build the UI now that data is ready
@@ -1855,9 +1889,34 @@ async function applyTexturePreset(preset) {
   const target = materialTargets[activeMaterialTarget];
   if (!target) return;
 
+  // Check if premium texture and user has access
+  if (preset.isPremium) {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      showToast("⭐ Premium texture - Login required");
+      return;
+    }
+
+    // Check user plan from user_credits table
+    const { data: userCredits } = await supabase
+      .from("user_credits")
+      .select("plan")
+      .eq("user_id", session.user.id)
+      .single();
+
+    const userPlan = userCredits?.plan || "free";
+    
+    if (userPlan !== "premium" && userPlan !== "studio") {
+      showToast("⭐ Premium texture - Upgrade to Premium or Studio");
+      // Optionally show upgrade modal
+      return;
+    }
+  }
+
   target.materialState.texture = preset;
 
-  // Always fetch fresh — never use cached blob URL (they die on refresh)
+  // Load diffuse/albedo texture (always present)
   let mapUrl = null;
   if (preset.r2Key) {
     try {
@@ -1867,6 +1926,45 @@ async function applyTexturePreset(preset) {
     }
   }
 
+  // Load additional PBR maps if they exist
+  let normalMapUrl = null;
+  let metallicMapUrl = null;
+  let roughnessMapUrl = null;
+  let aoMapUrl = null;
+
+  if (preset.r2KeyNormal) {
+    try {
+      normalMapUrl = await getAssetUrl("textures", preset.r2KeyNormal);
+    } catch (err) {
+      console.error("Failed to load normal map:", err);
+    }
+  }
+
+  if (preset.r2KeyMetallic) {
+    try {
+      metallicMapUrl = await getAssetUrl("textures", preset.r2KeyMetallic);
+    } catch (err) {
+      console.error("Failed to load metallic map:", err);
+    }
+  }
+
+  if (preset.r2KeyRoughness) {
+    try {
+      roughnessMapUrl = await getAssetUrl("textures", preset.r2KeyRoughness);
+    } catch (err) {
+      console.error("Failed to load roughness map:", err);
+    }
+  }
+
+  if (preset.r2KeyAO) {
+    try {
+      aoMapUrl = await getAssetUrl("textures", preset.r2KeyAO);
+    } catch (err) {
+      console.error("Failed to load AO map:", err);
+    }
+  }
+
+  // Apply textures to all meshes in the target
   target.meshes.forEach(mesh => {
     const mats = Array.isArray(mesh.material)
       ? mesh.material
@@ -1875,6 +1973,7 @@ async function applyTexturePreset(preset) {
     mats.forEach(mat => {
       if (!mat) return;
 
+      // Apply diffuse/albedo
       if (mapUrl) {
         mat.map = textureLoader.load(mapUrl);
         mat.map.colorSpace = THREE.SRGBColorSpace;
@@ -1882,13 +1981,44 @@ async function applyTexturePreset(preset) {
         mat.map = null;
       }
 
-      if (preset.normal) mat.normalMap = textureLoader.load(preset.normal);
-      if (preset.roughness !== undefined) mat.roughness = preset.roughness;
-      if (preset.metalness !== undefined) mat.metalness = preset.metalness;
+      // Apply normal map
+      if (normalMapUrl) {
+        mat.normalMap = textureLoader.load(normalMapUrl);
+      } else {
+        mat.normalMap = null;
+      }
+
+      // Apply metallic map
+      if (metallicMapUrl) {
+        mat.metalnessMap = textureLoader.load(metallicMapUrl);
+        mat.metalness = 1.0; // Enable metalness when map is present
+      } else {
+        mat.metalnessMap = null;
+        mat.metalness = 0.0; // Default non-metallic
+      }
+
+      // Apply roughness map
+      if (roughnessMapUrl) {
+        mat.roughnessMap = textureLoader.load(roughnessMapUrl);
+        mat.roughness = 1.0; // Let the map control roughness
+      } else {
+        mat.roughnessMap = null;
+        mat.roughness = 0.5; // Default mid-roughness
+      }
+
+      // Apply ambient occlusion map
+      if (aoMapUrl) {
+        mat.aoMap = textureLoader.load(aoMapUrl);
+        mat.aoMapIntensity = 1.0;
+      } else {
+        mat.aoMap = null;
+      }
 
       mat.needsUpdate = true;
     });
   });
+
+  showToast(`Applied: ${preset.label}`);
 }
 
 if (baseColorPicker) {
@@ -1999,7 +2129,17 @@ function buildTextureGrid() {
   const target = materialTargets[activeMaterialTarget];
   if (!target) return;
 
-  const presets = TEXTURE_PRESETS[target.domain] || [];
+  // Get all textures for this domain
+  let presets = TEXTURE_PRESETS[target.domain] || [];
+  
+  // Filter by compatible mesh if we have currentBaseMesh
+  if (currentBaseMesh) {
+    presets = presets.filter(preset => 
+      preset.compatibleMesh === "all" || 
+      preset.compatibleMesh === currentBaseMesh.r2Key ||
+      !preset.compatibleMesh // Handle legacy data without compatibleMesh
+    );
+  }
 
   if (!presets.length) {
     textureGrid.innerHTML = `
@@ -2014,19 +2154,40 @@ function buildTextureGrid() {
     const item = document.createElement("div");
     item.className = "texture-item";
     item.title = preset.label;
-    item.innerText = preset.label;
+    
+    // Create premium badge if needed
+    if (preset.isPremium) {
+      const badge = document.createElement("div");
+      badge.className = "premium-badge";
+      badge.innerHTML = "⭐";
+      badge.style.cssText = `
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        background: linear-gradient(135deg, #ffd700, #ff8c00);
+        color: #000;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: bold;
+        z-index: 1;
+        pointer-events: none;
+      `;
+      item.appendChild(badge);
+    }
 
-    // Load thumbnail if we have a cached URL
-    if (preset.map) {
-      item.style.backgroundImage = `url(${preset.map})`;
-      item.innerText = "";
-    } else if (preset.r2Key) {
+    // Use diffuse texture as thumbnail
+    if (preset.r2Key) {
       // Fetch URL and apply as background
       getAssetUrl("textures", preset.r2Key).then(url => {
-        // Don't cache on preset.map — blob URLs die on refresh
         item.style.backgroundImage = `url(${url})`;
-        item.innerText = "";
-      }).catch(() => {});
+        item.style.backgroundSize = "cover";
+        item.style.backgroundPosition = "center";
+      }).catch(() => {
+        item.innerText = preset.label;
+      });
+    } else {
+      item.innerText = preset.label;
     }
 
     item.onclick = () => applyTexturePreset(preset);
