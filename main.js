@@ -639,6 +639,12 @@ async function loadBaseMesh(meshData, onLoaded = null) {
   }
 
   resetClothingUI();
+  
+  // FIX BUG 2: Clear all custom textures when changing base mesh
+  Object.keys(meshTextureData).forEach(meshId => {
+    delete meshTextureData[meshId];
+  });
+  
   currentBaseMesh = meshData;
 
   // Highlight active card
@@ -1894,7 +1900,7 @@ async function applyTexturePreset(preset) {
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
-      showToast("⭐ Premium texture - Login required");
+      showToast("Premium texture - Login required");
       return;
     }
 
@@ -1908,7 +1914,7 @@ async function applyTexturePreset(preset) {
     const userPlan = userCredits?.plan || "free";
     
     if (userPlan !== "premium" && userPlan !== "studio") {
-      showToast("⭐ Premium texture - Upgrade to Premium or Studio");
+      showToast("Premium texture - Upgrade to Premium or Studio");
       // Optionally show upgrade modal
       return;
     }
@@ -2590,6 +2596,11 @@ function exitPainterMode() {
 
   isPainterMode = false;
 
+  // FIX BUG 1: Re-enable orbit controls
+  if (controls) {
+    controls.enabled = true;
+  }
+
   // restore renderer
   if (originalViewportParent) {
     originalViewportParent.appendChild(renderer.domElement);
@@ -2630,7 +2641,8 @@ document.getElementById("open-texture-painter").addEventListener("click", () => 
     meshData.selectedTexture = 'custom_1';
   }
   
-  currentTextureName = meshData.selectedTexture;
+  // FIX BUG 2: Use the last selected texture (not always custom_1)
+  currentTextureName = meshData.selectedTexture || 'custom_1';
   
   // Get the texture data
   const texData = meshData.textures[currentTextureName];
@@ -2646,6 +2658,9 @@ document.getElementById("open-texture-painter").addEventListener("click", () => 
     material: painterTargetMesh.material,
     texture: texData.texture
   });
+  
+  // FIX BUG 2: Apply the current texture to the character when opening painter
+  applySelectedTexture();
   
   // Sync color picker with current brush color
   const currentColor = texturePainter.color || '#ffffff';

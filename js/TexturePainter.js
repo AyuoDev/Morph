@@ -7,7 +7,8 @@ import * as THREE from "three";
 export class TexturePainter {
   constructor({ canvas, mesh, material, texture }) {
     this.canvas   = canvas;
-    this.ctx      = canvas.getContext("2d");
+    // FIX: Add willReadFrequently option to prevent performance warnings
+    this.ctx      = canvas.getContext("2d", { willReadFrequently: true });
     this.mesh     = mesh;
     this.material = material;
     this.texture  = texture;
