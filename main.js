@@ -4,6 +4,8 @@ import { OrbitControls } from "https://esm.sh/three@0.158.0/examples/jsm/control
 import { GLTFExporter } from "https://esm.sh/three@0.158.0/examples/jsm/exporters/GLTFExporter.js";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+import { PresetOverlay } from "./js/PresetOverlay.js";
+import { PresetSystem } from "./js/PresetSystem.js";
 import { initPlansOverlayControls } from "./js/Controls.js";
 import { createPreview } from "./js/PreviewRenderer.js";
 import {
@@ -28,12 +30,8 @@ const WORKER_URL = "https://morphara.maroukayuob.workers.dev";
 let BASE_MESHES = [];
 let CLOTHES     = [];
 let ANIMATIONS  = [];
-
-// Texture domains stay client-side (UI config, not assets)
-// compatible_mesh on a texture row = the domain key ("skin", "fabric", etc.)
 let TEXTURE_PRESETS = {};
-/* ---------------- STARTUP CLEANUP ---------------- */
-// Blob URLs are never cached — always fetched fresh from Worker
+let TEXTURES = [];
 
 /* ---------------- GLOBAL STATE ---------------- */
 
@@ -55,6 +53,10 @@ let isPainting = false;
 let uvOverlayImage = null;
 let showUVOverlay = true;
 let uvOpacity = 0.25;
+
+// Presets Global
+let presetOverlay;
+let presetSystem;
 
 // Texture Painter V2 state (meshTextureData imported from TexturePainter.js)
 let currentPainterMesh = null;
@@ -279,6 +281,98 @@ async function fetchAndDisplayPlan(userId) {
   badge.textContent      = planLabel;
   badge.style.background = badgeColors[planName] || "#444";
   badge.style.color      = "#fff";
+}
+
+// ============================================================================
+// BLEND SHAPE EXPORT LOCKING FUNCTIONS
+// Added for v0.1.2 - Free users get baked shapes, Premium/Studio get editable
+// ============================================================================
+
+// Get current user's subscription tier
+async function getUserSubscriptionTier() {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return 'free';
+    
+    const res = await fetch(`${WORKER_URL}/check-plan`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!res.ok) return 'free';
+    
+    const data = await res.json();
+    return data.plan || 'free'; // Returns: 'free', 'premium', or 'studio'
+  } catch (error) {
+    console.error('Failed to get subscription tier:', error);
+    return 'free'; // Default to free on error
+  }
+}
+
+// Check if user has access to blend shapes in export
+function hasBlendShapeExportAccess(tier) {
+  return ['premium', 'studio', 'admin'].includes(tier);
+}
+
+// Bake blend shapes into the mesh (for free users)
+function bakeBlendShapesIntoMesh(model) {
+  console.log('🔒 Baking blend shapes into mesh for free tier export');
+  
+  const bakedModel = model.clone(true);
+  
+  bakedModel.traverse(obj => {
+    if (obj.isSkinnedMesh || obj.isMesh) {
+      // Apply current morph target influences to geometry
+      if (obj.morphTargetInfluences && obj.morphTargetInfluences.length > 0) {
+        const geometry = obj.geometry;
+        
+        // Get position attribute
+        const position = geometry.attributes.position;
+        const morphPosition = geometry.morphAttributes.position;
+        
+        if (morphPosition && morphPosition.length > 0) {
+          // Clone the base positions
+          const positions = position.array.slice();
+          
+          console.log(`  Baking ${obj.morphTargetInfluences.length} blend shapes for ${obj.name}`);
+          
+          // Apply each morph target based on its influence
+          for (let i = 0; i < obj.morphTargetInfluences.length; i++) {
+            const influence = obj.morphTargetInfluences[i];
+            if (influence === 0) continue; // Skip if no influence
+            
+            const morphData = morphPosition[i];
+            if (!morphData) continue;
+            
+            // Add the morph displacement weighted by influence
+            for (let j = 0; j < positions.length; j++) {
+              positions[j] += morphData.array[j] * influence;
+            }
+          }
+          
+          // Update geometry with baked positions
+          geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+          geometry.attributes.position.needsUpdate = true;
+          
+          // Recalculate normals after position change
+          geometry.computeVertexNormals();
+          
+          // Remove morph targets and influences
+          delete geometry.morphAttributes;
+          obj.morphTargetInfluences = null;
+          obj.morphTargetDictionary = null;
+          
+          console.log(`  ✓ Blend shapes baked into ${obj.name}`);
+        }
+      }
+    }
+  });
+  
+  console.log('✓ All blend shapes baked into mesh');
+  return bakedModel;
 
   // Reset all plan cards first
   document.querySelectorAll(".plan-card").forEach(card => {
@@ -314,12 +408,6 @@ async function fetchAndDisplayPlan(userId) {
 }
 
 /* ---------------- ASSET DATA LAYER ---------------- */
-
-// Fetches asset from Worker and returns a blob:// URL.
-// Always fetches as blob first — validates content-type BEFORE handing
-// to GLTFLoader. This is the only way to prevent the "Unexpected token <"
-// crash when Cloudflare or the Worker returns an HTML error page,
-// because GLTFLoader's onError is never called for 200-OK HTML responses.
 async function getAssetUrl(bucket, filename, mode = "public") {
   let res;
 
@@ -337,9 +425,6 @@ async function getAssetUrl(bucket, filename, mode = "public") {
   }
 
   if (!res.ok) throw new Error(`Worker ${res.status} for ${filename}`);
-
-  // If Cloudflare returned an HTML error page (status 200 but wrong content)
-  // reject it NOW before GLTFLoader tries to parse it as JSON and crashes
   const ct = res.headers.get("content-type") || "";
   if (ct.includes("text/html")) {
     throw new Error(`Got HTML instead of GLB for ${filename} — Cloudflare error page`);
@@ -348,9 +433,6 @@ async function getAssetUrl(bucket, filename, mode = "public") {
   const blob = await res.blob();
   return URL.createObjectURL(blob);
 }
-
-// Fetches all assets from Supabase and populates BASE_MESHES, CLOTHES,
-// ANIMATIONS, TEXTURE_PRESETS — then builds the UI
 async function loadAllAssets() {
   const panel = document.getElementById("basemesh-panel");
   panel.innerHTML = "<p style='color:#888;font-size:13px;padding:16px'>Loading assets...</p>";
@@ -431,6 +513,7 @@ async function loadAllAssets() {
       console.error("Failed to load textures:", textureError);
     } else {
       TEXTURE_PRESETS = {};
+      TEXTURES = textureAssets || [];
       for (const t of textureAssets) {
         const domain = t.material_domain || "fabric"; // Use material_domain from textures table
         if (!TEXTURE_PRESETS[domain]) TEXTURE_PRESETS[domain] = [];
@@ -459,6 +542,228 @@ async function loadAllAssets() {
   }
 }
 
+// Presets Logics
+// ============ PRESET SYSTEM ============
+async function initPresetSystem() {
+  presetSystem = new PresetSystem({ supabase });
+  
+  presetOverlay = new PresetOverlay({
+    supabase,
+    // Pass these for 3D preview rendering
+    WORKER_URL: WORKER_URL,
+    getAssetUrl: getAssetUrl,
+    THREE: THREE,
+    GLTFLoader: GLTFLoader,
+    // Callbacks
+    onLoadPreset: async (preset) => {
+      await loadPresetCharacter(preset);
+    },
+    onStartScratch: () => {
+      console.log("Starting from scratch");
+    }
+  });
+  
+  await presetOverlay.init();
+}
+async function loadPresetCharacter(preset) {
+  try {
+    showToast("Loading preset...");
+    
+    const config = preset.config;
+    console.log("=== LOADING PRESET ===");
+    console.log("Config:", config);
+    
+    // 1. Load base mesh
+    if (config.baseMesh) {
+      const mesh = BASE_MESHES.find(m => m.r2Key === config.baseMesh.r2Key);
+      if (mesh) {
+        await new Promise(resolve => loadBaseMesh(mesh, resolve));
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    }
+    
+    // 2. Apply blend shapes
+    if (config.blendShapes) {
+      Object.entries(config.blendShapes).forEach(([name, value]) => {
+        morphValues[name] = value;
+      });
+      
+      Object.entries(morphValues).forEach(([name, value]) => {
+        if (blendShapeMap[name]) {
+          blendShapeMap[name].forEach(({ mesh, index }) => {
+            if (mesh.morphTargetInfluences) {
+              mesh.morphTargetInfluences[index] = value;
+            }
+          });
+        }
+      });
+      
+      buildCategorizedBlendShapesUI();
+    }
+    
+    // 3. Load clothing
+    if (config.clothing) {
+      
+      const clothingToEquip = Object.entries(config.clothing)
+        .filter(([category, item]) => item && item.r2Key);
+      
+      for (const [category, item] of clothingToEquip) {
+        const clothingItem = CLOTHES.find(c => c.r2Key === item.r2Key);
+        
+        if (clothingItem) {
+          await equipClothing(clothingItem);
+          await new Promise(r => setTimeout(r, 500));
+        }
+      }
+      rebuildMaterialTargets();
+      
+      // Wait a bit more for everything to settle
+      await new Promise(r => setTimeout(r, 500));
+      
+      // Re-apply blend shapes to clothing
+      Object.entries(morphValues).forEach(([name, value]) => {
+        if (blendShapeMap[name]) {
+          blendShapeMap[name].forEach(({ mesh, index }) => {
+            if (mesh.morphTargetInfluences) {
+              mesh.morphTargetInfluences[index] = value;
+            }
+          });
+        }
+      });
+    }
+    
+    // 4. Apply textures - materialTargets should be ready now
+    if (config.textures) {
+      
+      for (const [materialKey, texture] of Object.entries(config.textures)) {
+        if (!texture || !texture.r2Key) {
+          continue;
+        }
+        
+        // Check if materialTarget exists
+        if (!materialTargets[materialKey]) {
+          continue;
+        }
+        
+        const textureData = TEXTURES.find(t => t.r2_key === texture.r2Key);
+        
+        if (textureData) {
+          activeMaterialTarget = materialKey;
+          
+          const texturePreset = {
+            id: textureData.id,
+            label: textureData.name,
+            r2Key: textureData.r2_key,
+            r2Key_normal: textureData.r2_key_normal,
+            r2Key_metallic: textureData.r2_key_metallic,
+            r2Key_roughness: textureData.r2_key_roughness,
+            r2Key_ao: textureData.r2_key_ao,
+            compatibleMesh: textureData.compatible_mesh,
+            isPremium: textureData.is_premium,
+            material_domain: textureData.material_domain
+          };
+          
+          try {
+            await applyTexturePreset(texturePreset);
+            await new Promise(r => setTimeout(r, 300));
+          } catch (error) {
+          }
+        } else {
+        }
+      }
+    }
+    
+    // 5. Apply colors AFTER textures with delay
+    if (config.colors) {
+      console.log("\n=== APPLYING COLORS ===");
+      
+      // IMPORTANT: Wait longer for textures to fully load
+      await new Promise(r => setTimeout(r, 1000));
+      
+      Object.entries(config.colors).forEach(([key, colorHex]) => {
+        const target = materialTargets[key];
+        if (!target) {
+          console.warn(`⚠ No target for ${key}`);
+          return;
+        }
+        
+        console.log(`✓ Applying ${colorHex} to ${key}`);
+        
+        target.meshes.forEach(mesh => {
+          const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          mats.forEach(mat => {
+            if (mat?.color) {
+              mat.color.set(colorHex);  // Use .set() instead of .copy()
+              mat.needsUpdate = true;
+            }
+          });
+        });
+      });
+      
+      console.log("✓ Colors applied");
+    }
+    
+    // 6. Apply material properties
+    if (config.materials) {
+      
+      Object.entries(config.materials).forEach(([key, props]) => {
+        const target = materialTargets[key];
+        
+        if (!target) {
+          return;
+        }
+        target.meshes.forEach(mesh => {
+          const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          mats.forEach(mat => {
+            if (mat) {
+              if (props.roughness !== undefined) mat.roughness = props.roughness;
+              if (props.metalness !== undefined) mat.metalness = props.metalness;
+              mat.needsUpdate = true;
+            }
+          });
+        });
+      });
+    }
+    showToast(`✅ Loaded: ${preset.name}`);
+    
+  } catch (error) {
+    showToast(`Failed to load preset: ${error.message}`);
+  }
+}
+async function saveCurrentAsOfficialPreset(metadata) {
+  try {
+    showToast("Saving preset...");
+    
+    const config = presetSystem.captureState({
+      currentBaseMesh,
+      morphValues,
+      equippedClothes,
+      loadedClothingMeshes,
+      materialTargets,
+    });
+    
+    const validation = presetSystem.validateConfig(config);
+    if (!validation.valid) {
+      showToast(`Invalid: ${validation.errors.join(', ')}`);
+      return;
+    }
+    
+    const result = await presetSystem.saveAsOfficialPreset(config, metadata);
+    
+    if (result.success) {
+      showToast(`✅ Saved: ${metadata.name}`);
+    } else {
+      showToast(`Failed: ${result.error}`);
+    }
+  } catch (error) {
+    showToast("Failed to save preset");
+  }
+}
+
+// Helper to save from console
+window.savePreset = function(name, description, category = 'casual', tags = []) {
+  saveCurrentAsOfficialPreset({ name, description, category, tags });
+};
 /* ---------------- UI MODES ---------------- */
 
 const topButtons = document.querySelectorAll(".top-btn[data-mode]");
@@ -538,14 +843,27 @@ if(mode === "clothes")
     }
   }
 }
-
-/* ---------------- BOOT ---------------- */
-
-init();
-setUIMode("base");
-initPlansOverlayControls();
-loadAllAssets(); // fetches from Supabase then builds UI
-
+/* ---------------- APP STARTUP ---------------- */
+window.addEventListener('DOMContentLoaded', async () => {
+  // 1. Initialize Three.js scene
+  init();
+  
+  // 2. Start animation loop
+  animate();
+  
+  // 3. Load all assets (base meshes, clothes, textures, animations)
+  await loadAllAssets();
+  
+  // 4. Initialize UI
+  setUIMode("base");
+  initPlansOverlayControls();
+  
+  // 5. Initialize texture painter
+  initializeTexturePainterV2();
+  
+  // 6. Initialize preset system (shows overlay on first visit)
+  await initPresetSystem();
+});
 /* ---------------- INIT ---------------- */
 
 function init() {
@@ -1170,21 +1488,23 @@ async function equipClothing(item) {
   });
 
   currentModel.add(clothingRoot);
-// 🔑 REGISTER CLOTHING BLEND SHAPES
+
 collectBlendShapesFromObject(clothingRoot);
 
-// 🔑 SYNC CLOTHING TO CURRENT MORPH VALUES
 Object.entries(morphValues).forEach(([name, value]) => {
   blendShapeMap[name]?.forEach(({ mesh, index }) => {
     mesh.morphTargetInfluences[index] = value;
   });
 });
 
-  equippedClothes[item.category] = item.id;
+equippedClothes[item.category] = item.id;
   loadedClothingMeshes[item.id] = {
-  root: clothingRoot,
-  materialDomain: item.materialDomain || "fabric",
-  clothing: item  // Store clothing reference for UV map access
+    root: clothingRoot,
+    materialDomain: item.materialDomain || "fabric",
+    r2Key: item.r2Key,
+    name: item.name,
+    category: item.category,
+    clothing: item 
 };
 
   // Track successful equip
@@ -1540,15 +1860,34 @@ async function exportAnimationOnly(format) {
   }
 }
 
-function exportAsGLTF(format, includeModel = true) {
-  return new Promise((resolve, reject) => {
+async function exportAsGLTF(format, includeModel = true) {
+  return new Promise(async (resolve, reject) => {
     const exporter = new GLTFExporter();
-
-    currentModel.traverse(obj => {
-      if (obj.isSkinnedMesh && obj.morphTargetInfluences) {
-        obj.morphTargetInfluences = obj.morphTargetInfluences.map(v => v);
-      }
-    });
+    
+    // Get user's subscription tier
+    const tier = await getUserSubscriptionTier();
+    const includeBlendShapes = hasBlendShapeExportAccess(tier);
+    
+    // Determine which model to export
+    let modelToExport = currentModel;
+    
+    if (!includeBlendShapes) {
+      // FREE USER: Bake blend shapes
+      console.log('🔒 Free tier: Baking blend shapes into mesh');
+      modelToExport = bakeBlendShapesIntoMesh(currentModel);
+      
+      showToast('Exporting with baked blend shapes (Free plan)', 2000);
+    } else {
+      // PREMIUM/STUDIO: Keep blend shapes
+      console.log('✅ Premium/Studio tier: Including blend shapes');
+      
+      // Ensure morph target influences are preserved
+      currentModel.traverse(obj => {
+        if (obj.isSkinnedMesh && obj.morphTargetInfluences) {
+          obj.morphTargetInfluences = obj.morphTargetInfluences.map(v => v);
+        }
+      });
+    }
 
     const options = {
       binary: format === "glb",
@@ -1560,7 +1899,7 @@ function exportAsGLTF(format, includeModel = true) {
     };
 
     exporter.parse(
-      currentModel,
+      modelToExport,
       result => {
         try {
           let blob;
@@ -1573,6 +1912,17 @@ function exportAsGLTF(format, includeModel = true) {
           }
 
           downloadBlob(blob, filename);
+          
+          // Track export with blend shape status
+          if (window.posthog) {
+            posthog.capture('character_exported_glb', {
+              format: format,
+              subscription_tier: tier,
+              blend_shapes_included: includeBlendShapes,
+              blend_shapes_baked: !includeBlendShapes
+            });
+          }
+          
           resolve();
         } catch (err) {
           reject(err);
@@ -1648,7 +1998,15 @@ async function exportAsFBX() {
   }
 
   try {
-    showToast("Preparing FBX export...");
+    // Get user's subscription tier
+    const tier = await getUserSubscriptionTier();
+    const includeBlendShapes = hasBlendShapeExportAccess(tier);
+    
+    if (!includeBlendShapes) {
+      showToast("Preparing FBX export (blend shapes will be baked)...");
+    } else {
+      showToast("Preparing FBX export...");
+    }
 
     // Export current model as GLB first
     const glbBlob = await new Promise((resolve, reject) => {
@@ -1658,14 +2016,27 @@ async function exportAsFBX() {
       }
 
       const exporter = new GLTFExporter();
+      
+      // Determine which model to export
+      let modelToExport = currentModel;
+      
+      if (!includeBlendShapes) {
+        // FREE USER: Bake blend shapes
+        console.log('🔒 Free tier: Baking blend shapes for FBX export');
+        modelToExport = bakeBlendShapesIntoMesh(currentModel);
+      } else {
+        // PREMIUM/STUDIO: Keep blend shapes
+        console.log('✅ Premium/Studio tier: Including blend shapes in FBX');
+      }
+      
       const options = {
         binary: true,
-        animations: mixer && mixer._actions ? Array.from(mixer._actions).map(a => a._clip) : [], // Export all animations
+        animations: mixer && mixer._actions ? Array.from(mixer._actions).map(a => a._clip) : [],
         maxTextureSize: 4096
       };
 
       exporter.parse(
-        currentModel,
+        modelToExport,
         (result) => {
           resolve(new Blob([result], { type: 'application/octet-stream' }));
         },
@@ -1696,7 +2067,6 @@ async function exportAsFBX() {
         errorData = await response.json();
         console.error('Worker error response:', errorData);
         
-        // Check if credit was refunded
         if (errorData.creditRefunded) {
           showToast(`Export failed: ${errorData.error || 'Unknown error'}. Credit refunded.`, 4000);
         } else {
@@ -1721,12 +2091,26 @@ async function exportAsFBX() {
     const filename = `character_${Date.now()}_fbx.zip`;
     downloadBlob(zipBlob, filename);
     
-    // Show success with details
-    const message = textureCount > 0 
-      ? `FBX exported! ${textureCount} texture${textureCount > 1 ? 's' : ''} included. Extract the ZIP to use.`
+    // Show success with blend shape status
+    let message = textureCount > 0 
+      ? `FBX exported! ${textureCount} texture${textureCount > 1 ? 's' : ''} included.`
       : "FBX exported successfully!";
     
-    showToast(message, 4000);
+    if (!includeBlendShapes) {
+      message += " (Blend shapes baked - upgrade to Premium for editable blend shapes)";
+    }
+    
+    showToast(message, 5000);
+    
+    // Track export
+    if (window.posthog) {
+      posthog.capture('character_exported_fbx', {
+        subscription_tier: tier,
+        blend_shapes_included: includeBlendShapes,
+        blend_shapes_baked: !includeBlendShapes,
+        texture_count: textureCount
+      });
+    }
     
     // Refresh credits display
     const { data: userData } = await supabase
@@ -1743,7 +2127,6 @@ async function exportAsFBX() {
   } catch (error) {
     console.error('FBX export error:', error);
     
-    // Check if error response indicates refund
     if (error.message?.includes('creditRefunded')) {
       showToast("Export failed. Credit refunded.", 3000);
     } else {
@@ -1983,6 +2366,7 @@ async function applyTexturePreset(preset) {
       if (mapUrl) {
         mat.map = textureLoader.load(mapUrl);
         mat.map.colorSpace = THREE.SRGBColorSpace;
+        mat.map.flipY = false;
       } else {
         mat.map = null;
       }
@@ -3485,7 +3869,3 @@ function updateResetButtonState() {
   const texData = meshTextureData[currentPainterMesh]?.textures[currentTextureName];
   resetBtn.disabled = !texData?.isCustom;
 }
-
-window.addEventListener('DOMContentLoaded', () => {
-  initializeTexturePainterV2();
-});

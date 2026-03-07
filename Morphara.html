@@ -14,7 +14,7 @@
 </script>
 <!-- Modern browsers -->
 <link rel="icon" type="image/png" sizes="32x32" href="images/morphara_icon.png">
-
+  <link rel="canonical" href="https://morphara.com/Morphara">
 <!-- Mobile / PWA -->
 <link rel="apple-touch-icon" href="images/morphara_icon.png">
   <link rel="stylesheet" href="css/style.css">
@@ -71,47 +71,60 @@
 
 
 <!-- ================= LAUNCH OVERLAY ================= -->
-<div id="launch-overlay" class="launch-overlay">
+<div id="preset-overlay" class="preset-overlay">
+  <div class="preset-panel">
+    
+    <!-- Close Button (X) - Only show after first visit -->
+    <button id="close-preset-overlay" class="preset-close" style="display:none;">✕</button>
 
-  <div class="launch-panel">
-
-    <button id="close-launch" class="launch-close">✕</button>
-
-    <div class="launch-hero">
-      <h1>🎉 First 1000 Users Get 1 FREE Export</h1>
-      <p>Create an account today and receive 1 credit instantly.</p>
+    <!-- Header -->
+    <div class="preset-header">
+      <h1>Choose Your Character</h1>
+      <p>Select a preset to start customizing, or build from scratch</p>
     </div>
 
-    <div class="launch-content">
-
-      <h2>Welcome to Morphara v0.1.1</h2>
-
-      <p>
-        Morphara is a browser-based character creation tool designed for game developers,
-        indie creators, and artists who want fast, customizable, animation-ready characters.
-      </p>
-
-      <ul>
-        <li>✔ Multiple Base Meshes</li>
-        <li>✔ Clothing Customization</li>
-        <li>✔ Texture Painting</li>
-        <li>✔ Animation System</li>
-        <li>✔ GLB Export Ready</li>
-              <li class="launch-feature-unavailable">✘ FBX Export (Premium+)</li>
-      </ul>
-
-      <h3>🚀 Roadmap</h3>
-      <ul>
-        <li>More Base Meshes</li>
-        <li>Full Animator Editor</li>
-        <li>Monster & Creature</li>
-        <li>Advanced Animation Blending</li>
-      </ul>
-
-      <button class="launch-cta" id="launch-signup-btn">
-        Sign Up Now
+    <!-- Carousel Container -->
+    <div class="preset-carousel-container">
+      
+      <!-- Left Arrow -->
+      <button class="preset-arrow preset-arrow-left" id="preset-arrow-left" disabled>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M15 18l-6-6 6-6"/>
+        </svg>
       </button>
 
+      <!-- Preset Cards Grid -->
+      <div class="preset-carousel" id="preset-carousel">
+        <!-- Cards dynamically loaded here -->
+        <div class="preset-loading">Loading presets...</div>
+      </div>
+
+      <!-- Right Arrow -->
+      <button class="preset-arrow preset-arrow-right" id="preset-arrow-right">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 18l6-6-6-6"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Page Indicators -->
+    <div class="preset-indicators" id="preset-indicators">
+      <!-- Dots dynamically added here -->
+    </div>
+
+    <!-- Bottom Actions -->
+    <div class="preset-actions">
+      <button class="preset-scratch-btn" id="preset-scratch-btn">
+        Start from Scratch
+      </button>
+    </div>
+
+    <!-- Don't Show Again (after first visit) -->
+    <div class="preset-footer">
+      <label class="preset-checkbox">
+        <input type="checkbox" id="preset-dont-show">
+        <span>Don't show this again on startup</span>
+      </label>
     </div>
 
   </div>
@@ -136,6 +149,7 @@
     <button class="top-btn" data-mode="materials">Materials</button>
     <button class="top-btn" data-mode="animations">Animations</button>
     <button class="top-btn" data-mode="randomizer">Random</button>
+    <button class="top-btn" id="preset-top-btn">Presets</button>
   </div>
 
   <!-- RIGHT -->
@@ -163,9 +177,6 @@
   </div>
 
 </div>
-
-
-  <!-- ================= EXPORT MENU ================= -->
 
 </div>
 
