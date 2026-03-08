@@ -3560,7 +3560,16 @@ function updateAuthUI() {
 
   authSubmit.textContent =
     authMode === "signup" ? "Create Account" : "Login";
+  
+  // Show/hide signup checkboxes
+  const signupCheckboxes = document.getElementById("signup-checkboxes");
+  if (signupCheckboxes) {
+    signupCheckboxes.style.display = authMode === "signup" ? "block" : "none";
+  }
 }
+
+// Initialize auth UI
+updateAuthUI();
 
 // ================= EMAIL AUTH =================
 
@@ -3576,10 +3585,30 @@ authSubmit.addEventListener("click", async () => {
     return;
   }
 
+  // Validate terms checkbox for signup
+  if (authMode === "signup") {
+    const termsCheckbox = document.getElementById("terms-checkbox");
+    if (termsCheckbox && !termsCheckbox.checked) {
+      authError.textContent = "You must agree to the Terms of Service and Privacy Policy";
+      return;
+    }
+  }
+
   try {
     if (authMode === "signup") {
       const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
+
+      // Subscribe to newsletter if checked
+      const newsletterCheckbox = document.getElementById("newsletter-checkbox");
+      if (newsletterCheckbox && newsletterCheckbox.checked) {
+        try {
+          await supabase.from("newsletter").upsert({ email }, { onConflict: "email" });
+        } catch (newsError) {
+          console.error("Newsletter subscription failed:", newsError);
+          // Don't block signup if newsletter fails
+        }
+      }
 
       // Supabase may require email confirmation — session may be null
       if (!data.session) {

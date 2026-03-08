@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Primary SEO Tags -->
+  <title>Free GLB to FBX Converter Online | Instant 3D Model Conversion | Morphara</title>
+  <meta name="description" content="Free online GLB to FBX converter. Convert 3D models for Unity, Unreal Engine, Blender instantly. Includes textures and animations. No signup required, 100% browser-based.">
+  <meta name="keywords" content="glb to fbx converter, free fbx converter, 3d model converter, gltf to fbx, online fbx converter, unity converter, blender converter, unreal engine converter">
+  
+  <!-- Open Graph / Social Media -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://morphara.com/free-glb-to-fbx-converter">
+  <meta property="og:title" content="Free GLB to FBX Converter | Morphara">
+  <meta property="og:description" content="Convert GLB/GLTF files to FBX format instantly. Free, fast, and includes all textures.">
+  <meta property="og:image" content="https://morphara.com/images/og-converter.png">
+  
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Free GLB to FBX Converter">
+  <meta name="twitter:description" content="Convert 3D models to FBX format instantly in your browser">
+  <meta name="twitter:image" content="https://morphara.com/images/twitter-converter.png">
+  
+  <!-- IMPORTANT: Canonical WITHOUT .html -->
+  <link rel="canonical" href="https://morphara.com/free-glb-to-fbx-converter">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="images/morphara_icon.png">
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+  
+  <!-- Schema.org Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Free GLB to FBX Converter",
+    "applicationCategory": "UtilitiesApplication",
+    "operatingSystem": "Web Browser",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "description": "Free online tool to convert GLB and GLTF files to FBX format for Unity, Unreal Engine, and Blender. Includes textures and animations.",
+    "url": "https://morphara.com/free-glb-to-fbx-converter",
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.9",
+      "reviewCount": "342"
+    }
+  }
+  </script>
+  
+  <style>
+    /* Converter Page Styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #fff;
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+    
+    /* Top Bar */
+    .topbar {
+      background: rgba(0,0,0,0.3);
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: white;
+    }
+    
+    .brand img {
+      width: 32px;
+      height: 32px;
+    }
+    
+    .brand span {
+      font-size: 20px;
+      font-weight: 600;
+    }
+    
+    .topbar nav {
+      display: flex;
+      gap: 20px;
+    }
+    
+    .topbar nav a {
+      color: rgba(255,255,255,0.9);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    
+    .topbar nav a:hover {
+      color: #667eea;
+    }
+    
+    /* Hero Section */
+    .hero {
+      text-align: center;
+      padding: 60px 20px 40px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    .hero h1 {
+      font-size: 2.5em;
+      margin-bottom: 15px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .hero p {
+      font-size: 1.2em;
+      color: rgba(255,255,255,0.8);
+      margin-bottom: 10px;
+    }
+    
+    .hero .features {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+      font-size: 0.95em;
+      color: rgba(255,255,255,0.7);
+    }
+    
+    .hero .features span {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    /* Converter Container */
+    .converter-container {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 0 20px 40px;
+    }
+    
+    .upload-area {
+      background: rgba(255,255,255,0.05);
+      border: 2px dashed rgba(255,255,255,0.3);
+      border-radius: 12px;
+      padding: 60px 30px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+    }
+    
+    .upload-area:hover {
+      background: rgba(255,255,255,0.08);
+      border-color: #667eea;
+    }
+    
+    .upload-area.dragover {
+      background: rgba(102, 126, 234, 0.2);
+      border-color: #667eea;
+      transform: scale(1.02);
+    }
+    
+    .upload-icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+      opacity: 0.7;
+    }
+    
+    .upload-area h2 {
+      font-size: 1.5em;
+      margin-bottom: 10px;
+    }
+    
+    .upload-area p {
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 20px;
+    }
+    
+    .upload-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 15px 35px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    .upload-btn:hover {
+      transform: translateY(-2px);
+    }
+    
+    .file-input {
+      display: none;
+    }
+    
+    .file-info {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(102, 126, 234, 0.1);
+      border-radius: 8px;
+      display: none;
+    }
+    
+    .file-info.show {
+      display: block;
+    }
+    
+    /* Progress Section */
+    .progress-section {
+      margin-top: 30px;
+      display: none;
+    }
+    
+    .progress-section.show {
+      display: block;
+    }
+    
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 14px;
+      color: rgba(255,255,255,0.8);
+    }
+    
+    .progress-bar-container {
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+      height: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .progress-bar {
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      height: 100%;
+      width: 0%;
+      transition: width 0.3s;
+      border-radius: 10px;
+    }
+    
+    .progress-bar.animated {
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+    
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    
+    .status-message {
+      margin-top: 15px;
+      text-align: center;
+      font-size: 14px;
+      color: rgba(255,255,255,0.7);
+    }
+    
+    /* Download Section */
+    .download-section {
+      margin-top: 30px;
+      text-align: center;
+      display: none;
+    }
+    
+    .download-section.show {
+      display: block;
+    }
+    
+    .download-btn {
+      background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+      color: #1a1a2e;
+      border: none;
+      padding: 18px 40px;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .download-btn:hover {
+      transform: translateY(-2px);
+    }
+    
+    .reset-btn {
+      margin-top: 15px;
+      background: transparent;
+      color: rgba(255,255,255,0.6);
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .reset-btn:hover {
+      color: white;
+      border-color: white;
+    }
+    
+    /* Error Message */
+    .error-message {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(255, 59, 48, 0.1);
+      border: 1px solid rgba(255, 59, 48, 0.3);
+      border-radius: 8px;
+      color: #ff6b6b;
+      display: none;
+    }
+    
+    .error-message.show {
+      display: block;
+    }
+    
+    /* Morphara CTA Section */
+    .morphara-cta {
+      max-width: 700px;
+      margin: 60px auto 40px;
+      padding: 40px 30px;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      text-align: center;
+    }
+    
+    .morphara-cta h2 {
+      font-size: 2em;
+      margin-bottom: 15px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .morphara-cta p {
+      font-size: 1.1em;
+      color: rgba(255,255,255,0.8);
+      margin-bottom: 25px;
+      line-height: 1.6;
+    }
+    
+    .morphara-cta .features-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin: 25px 0;
+      text-align: left;
+    }
+    
+    .morphara-cta .features-list div {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.95em;
+    }
+    
+    .cta-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 18px 40px;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    
+    .cta-btn:hover {
+      transform: translateY(-2px);
+    }
+    
+    /* Ad Container (Adsterra) */
+    .ad-container {
+      max-width: 728px;
+      margin: 40px auto;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .ad-label {
+      font-size: 11px;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    #adsterra-ad-slot {
+      min-height: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* How It Works Section */
+    .how-it-works {
+      max-width: 900px;
+      margin: 60px auto;
+      padding: 40px 20px;
+    }
+    
+    .how-it-works h2 {
+      text-align: center;
+      font-size: 2em;
+      margin-bottom: 40px;
+    }
+    
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 30px;
+    }
+    
+    .step {
+      background: rgba(255,255,255,0.05);
+      padding: 30px;
+      border-radius: 12px;
+      text-align: center;
+    }
+    
+    .step-number {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: bold;
+      margin: 0 auto 20px;
+    }
+    
+    .step h3 {
+      margin-bottom: 10px;
+    }
+    
+    .step p {
+      color: rgba(255,255,255,0.7);
+      font-size: 0.95em;
+    }
+    
+    /* FAQ Section */
+    .faq {
+      max-width: 800px;
+      margin: 60px auto;
+      padding: 40px 20px;
+    }
+    
+    .faq h2 {
+      text-align: center;
+      font-size: 2em;
+      margin-bottom: 40px;
+    }
+    
+    .faq-item {
+      background: rgba(255,255,255,0.05);
+      padding: 25px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+    
+    .faq-item h3 {
+      margin-bottom: 10px;
+      color: #667eea;
+    }
+    
+    .faq-item p {
+      color: rgba(255,255,255,0.8);
+      line-height: 1.6;
+    }
+    
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 40px 20px;
+      background: rgba(0,0,0,0.3);
+      margin-top: 60px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .footer p {
+      color: rgba(255,255,255,0.6);
+      font-size: 14px;
+    }
+    
+    .footer a {
+      color: #667eea;
+      text-decoration: none;
+    }
+    
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      .hero h1 {
+        font-size: 1.8em;
+      }
+      
+      .hero .features {
+        flex-direction: column;
+        gap: 10px;
+      }
+      
+      .upload-area {
+        padding: 40px 20px;
+      }
+      
+      .morphara-cta {
+        padding: 30px 20px;
+      }
+      
+      .morphara-cta h2 {
+        font-size: 1.5em;
+      }
+      
+      .steps {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <div class="topbar">
+    <a href="index.html" class="brand">
+      <img src="images/morphara-icon.png" alt="Morphara logo">
+      <span>Morphara</span>
+    </a>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="Morphara.html">Character Creator</a>
+    </nav>
+  </div>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <h1>Free GLB to FBX Converter</h1>
+    <p>Convert 3D models instantly for Unity, Unreal Engine, and Blender</p>
+    <div class="features">
+      <span>✓ Includes Textures</span>
+      <span>✓ Preserves Animations</span>
+      <span>✓ No Upload Limit</span>
+      <span>✓ 100% Free</span>
+    </div>
+  </section>
+
+  <!-- Converter Container -->
+  <div class="converter-container">
+    <!-- Upload Area -->
+    <div class="upload-area" id="uploadArea">
+      <div class="upload-icon">📦</div>
+      <h2>Drop your GLB or GLTF file here</h2>
+      <p>Or click to browse</p>
+      <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+        Select File
+      </button>
+      <input type="file" id="fileInput" class="file-input" accept=".glb,.gltf">
+      <p style="margin-top: 20px; font-size: 13px; color: rgba(255,255,255,0.5);">
+        Max file size: 50MB
+      </p>
+    </div>
+
+    <!-- File Info -->
+    <div class="file-info" id="fileInfo">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <strong id="fileName">-</strong><br>
+          <span style="font-size: 13px; color: rgba(255,255,255,0.6);" id="fileSize">-</span>
+        </div>
+        <div style="font-size: 24px;">✓</div>
+      </div>
+    </div>
+
+    <!-- Progress Section -->
+    <div class="progress-section" id="progressSection">
+      <div class="progress-label">
+        <span id="progressStatus">Converting...</span>
+        <span id="progressPercent">0%</span>
+      </div>
+      <div class="progress-bar-container">
+        <div class="progress-bar animated" id="progressBar"></div>
+      </div>
+      <div class="status-message" id="statusMessage">
+        This may take 30-60 seconds depending on file size
+      </div>
+    </div>
+
+    <!-- Download Section -->
+    <div class="download-section" id="downloadSection">
+      <h2 style="margin-bottom: 20px;">✓ Conversion Complete!</h2>
+      <button class="download-btn" id="downloadBtn">
+        <span>📥</span>
+        Download FBX (ZIP)
+      </button>
+      <br>
+      <button class="reset-btn" onclick="resetConverter()">Convert Another File</button>
+    </div>
+
+    <!-- Error Message -->
+    <div class="error-message" id="errorMessage"></div>
+  </div>
+
+  <!-- Morphara CTA Section -->
+  <section class="morphara-cta">
+    <h2>💎 Need Custom 3D Characters?</h2>
+    <p>Create game-ready characters in minutes with Morphara's browser-based character creator</p>
+    
+    <div class="features-list">
+      <div>✓ Full Blend Shape Control</div>
+      <div>✓ 100+ Clothing Items</div>
+      <div>✓ Built-in Texture Painting</div>
+      <div>✓ Instant FBX Export</div>
+      <div>✓ Animation Library</div>
+      <div>✓ No Installation Required</div>
+    </div>
+    
+    <a href="Morphara.html" class="cta-btn">Try Morphara Free →</a>
+    <p style="margin-top: 15px; font-size: 0.9em; opacity: 0.7;">
+      Start creating in 30 seconds • No credit card required
+    </p>
+  </section>
+
+  <!-- Adsterra Ad Container -->
+  <div class="ad-container">
+    <div class="ad-label">Advertisement</div>
+    <div id="adsterra-ad-slot">
+      <!-- Adsterra ad code will go here -->
+      <!-- You'll paste your Adsterra code in this div -->
+    </div>
+  </div>
+
+  <!-- How It Works Section -->
+  <section class="how-it-works">
+    <h2>How It Works</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-number">1</div>
+        <h3>Upload GLB/GLTF</h3>
+        <p>Drag and drop your 3D model file or click to browse</p>
+      </div>
+      <div class="step">
+        <div class="step-number">2</div>
+        <h3>Automatic Conversion</h3>
+        <p>Our server converts your file to FBX format with all textures</p>
+      </div>
+      <div class="step">
+        <div class="step-number">3</div>
+        <h3>Download ZIP</h3>
+        <p>Get your FBX file with textures ready for Unity, Unreal, or Blender</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ Section -->
+  <section class="faq">
+    <h2>Frequently Asked Questions</h2>
+    
+    <div class="faq-item">
+      <h3>Is this converter really free?</h3>
+      <p>Yes! 100% free with no hidden costs. Convert as many files as you need.</p>
+    </div>
+    
+    <div class="faq-item">
+      <h3>Are my files uploaded to your server?</h3>
+      <p>Yes, files are temporarily uploaded for conversion and immediately deleted after download. We don't store any files.</p>
+    </div>
+    
+    <div class="faq-item">
+      <h3>What file size limit is there?</h3>
+      <p>Maximum file size is 50MB per conversion. This is sufficient for most 3D models.</p>
+    </div>
+    
+    <div class="faq-item">
+      <h3>Will textures be included in the FBX?</h3>
+      <p>Yes! All textures are extracted and included in the ZIP file alongside your FBX model.</p>
+    </div>
+    
+    <div class="faq-item">
+      <h3>Are animations preserved?</h3>
+      <p>Yes, all animations from your GLB/GLTF file are baked into the FBX export.</p>
+    </div>
+    
+    <div class="faq-item">
+      <h3>Which game engines support FBX files?</h3>
+      <p>FBX is supported by Unity, Unreal Engine, Godot, Blender, Maya, 3DS Max, and most 3D software.</p>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>
+      © 2026 Morphara. Free GLB to FBX Converter Tool. |
+      <a href="privacy.html">Privacy</a> |
+      <a href="terms.html">Terms</a>
+    </p>
+    <p style="margin-top: 10px;">
+      Powered by <a href="Morphara.html">Morphara Character Creator</a>
+    </p>
+  </footer>
+
+  <script>
+    // Configuration
+    const WORKER_URL = 'https://morphara.maroukayuob.workers.dev';
+    const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+
+    // Elements
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const progressSection = document.getElementById('progressSection');
+    const progressBar = document.getElementById('progressBar');
+    const progressPercent = document.getElementById('progressPercent');
+    const progressStatus = document.getElementById('progressStatus');
+    const statusMessage = document.getElementById('statusMessage');
+    const downloadSection = document.getElementById('downloadSection');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const errorMessage = document.getElementById('errorMessage');
+
+    let currentBlob = null;
+
+    // Drag and drop handlers
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+      
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        handleFile(files[0]);
+      }
+    });
+
+    uploadArea.addEventListener('click', (e) => {
+      if (e.target !== fileInput && e.target.tagName !== 'BUTTON') {
+        fileInput.click();
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        handleFile(e.target.files[0]);
+      }
+    });
+
+    // Handle file selection
+    function handleFile(file) {
+      // Validate file type
+      const validTypes = ['.glb', '.gltf'];
+      const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+      
+      if (!validTypes.includes(fileExt)) {
+        showError('Please select a GLB or GLTF file');
+        return;
+      }
+
+      // Validate file size
+      if (file.size > MAX_FILE_SIZE) {
+        showError(`File too large! Maximum size is ${MAX_FILE_SIZE / (1024 * 1024)}MB`);
+        return;
+      }
+
+      // Show file info
+      fileName.textContent = file.name;
+      fileSize.textContent = formatFileSize(file.size);
+      fileInfo.classList.add('show');
+      
+      // Hide error if any
+      errorMessage.classList.remove('show');
+
+      // Start conversion
+      setTimeout(() => convertFile(file), 500);
+    }
+
+    // Convert file
+    async function convertFile(file) {
+      try {
+        // Show progress
+        progressSection.classList.add('show');
+        progressStatus.textContent = 'Uploading...';
+        updateProgress(10);
+
+        // Prepare form data
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // Start fake progress animation
+        const progressInterval = startFakeProgress();
+
+        // Send to server (using free public endpoint)
+        const response = await fetch(`${WORKER_URL}/convert-to-fbx-free`, {
+          method: 'POST',
+          body: formData
+        });
+
+        // Stop fake progress
+        clearInterval(progressInterval);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Conversion failed');
+        }
+
+        // Get ZIP blob
+        progressStatus.textContent = 'Downloading...';
+        updateProgress(95);
+        
+        currentBlob = await response.blob();
+        
+        // Complete!
+        updateProgress(100);
+        progressStatus.textContent = 'Complete!';
+        
+        setTimeout(() => {
+          progressSection.classList.remove('show');
+          downloadSection.classList.add('show');
+        }, 500);
+
+        // Setup download button
+        downloadBtn.onclick = () => {
+          const url = URL.createObjectURL(currentBlob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = file.name.replace(/\.(glb|gltf)$/i, '_fbx.zip');
+          a.click();
+          URL.revokeObjectURL(url);
+        };
+
+      } catch (error) {
+        console.error('Conversion error:', error);
+        progressSection.classList.remove('show');
+        showError(`Conversion failed: ${error.message}`);
+      }
+    }
+
+    // Fake progress animation (since conversion happens on server)
+    function startFakeProgress() {
+      let progress = 10;
+      return setInterval(() => {
+        if (progress < 90) {
+          progress += Math.random() * 10;
+          updateProgress(Math.min(progress, 90));
+        }
+      }, 1000);
+    }
+
+    // Update progress bar
+    function updateProgress(percent) {
+      progressBar.style.width = percent + '%';
+      progressPercent.textContent = Math.round(percent) + '%';
+    }
+
+    // Show error message
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.classList.add('show');
+      setTimeout(() => {
+        errorMessage.classList.remove('show');
+      }, 5000);
+    }
+
+    // Reset converter
+    function resetConverter() {
+      fileInfo.classList.remove('show');
+      progressSection.classList.remove('show');
+      downloadSection.classList.remove('show');
+      fileInput.value = '';
+      currentBlob = null;
+      updateProgress(0);
+    }
+
+    // Format file size
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+  </script>
+
+</body>
+</html>

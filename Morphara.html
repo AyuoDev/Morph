@@ -51,6 +51,24 @@
       <input type="email" id="auth-email" placeholder="Email" />
       <input type="password" id="auth-password" placeholder="Password" />
 
+      <!-- Checkboxes for signup only -->
+      <div id="signup-checkboxes" style="margin: 15px 0; text-align: left; font-size: 14px; display: none;">
+        <label style="display: flex; align-items: flex-start; margin-bottom: 10px; cursor: pointer;">
+          <input type="checkbox" id="newsletter-checkbox" style="margin-right: 8px; margin-top: 3px; cursor: pointer;">
+          <span style="color: rgba(255,255,255,0.9);">Send me updates about new features and content (optional)</span>
+        </label>
+        
+        <label style="display: flex; align-items: flex-start; cursor: pointer;">
+          <input type="checkbox" id="terms-checkbox" required style="margin-right: 8px; margin-top: 3px; cursor: pointer;">
+          <span style="color: rgba(255,255,255,0.9);">
+            By signing up, you agree to our 
+            <a href="terms.html" target="_blank" style="color: #667eea; text-decoration: none;">Terms of Service</a> 
+            and 
+            <a href="privacy.html" target="_blank" style="color: #667eea; text-decoration: none;">Privacy Policy</a>
+          </span>
+        </label>
+      </div>
+
       <button id="auth-submit" class="auth-main-btn">
         Create Account
       </button>
@@ -139,7 +157,7 @@
   <img src="images/morphara_icon.png" class="app-icon" />
   <div class="app-title">
     Morphara
-    <span class="app-version">v0.1.1</span>
+    <span class="app-version">v0.1.2</span>
   </div>
 </div>
 

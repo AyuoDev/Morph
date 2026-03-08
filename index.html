@@ -71,6 +71,12 @@
     <img src="images/morphara-icon.png" alt="Morphara logo" />
     <span>Morphara</span>
   </div>
+  <nav style="display: flex; gap: 20px; align-items: center;">
+    <a href="Morphara.html" style="color: #fff; text-decoration: none; font-weight: 500; transition: color 0.2s;" onmouseover="this.style.color='#667eea'" onmouseout="this.style.color='#fff'">Try Morphara</a>
+    <a href="#changelogs" style="color: #fff; text-decoration: none; font-weight: 500; transition: color 0.2s;" onmouseover="this.style.color='#667eea'" onmouseout="this.style.color='#fff'">Changelogs</a>
+    <a href="#footer" style="color: #fff; text-decoration: none; font-weight: 500; transition: color 0.2s;" onmouseover="this.style.color='#667eea'" onmouseout="this.style.color='#fff'">Contact</a>
+    <a href="free-glb-to-fbx-converter" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">GLB → FBX Converter</a>
+  </nav>
 </div>
 
   <!-- HERO -->
@@ -164,10 +170,31 @@
   </section>
 
   <!-- CHANGELOG -->
-  <section>
+  <section id="changelogs">
     <h2>Changelog</h2>
     <div class="changelog">
        <div class="version open">
+        <div class="version-header">
+          <span class="arrow">▼</span>
+          <h3>v0.1.2 - Preset System, Painter Fixes & Free GLB→FBX Converter 🎨</h3>
+        </div>
+        <ul>
+          <li><strong>Preset System:</strong> Save and load complete character configurations including base mesh, clothing, textures, colors, materials, and blend shapes</li>
+          <li><strong>Official Presets:</strong> Curated preset library with professionally designed characters across categories (casual, professional, sci-fi, fantasy, tactical, gaming)</li>
+          <li><strong>Preset UI:</strong> Beautiful overlay interface with category filtering, search, and visual previews</li>
+          <li><strong>Texture Painter Fixes:</strong> Resolved issues with texture loading, application, and persistence across material switches</li>
+          <li><strong>Color Application Fix:</strong> Fixed material color timing issues - colors now apply correctly after textures load</li>
+          <li><strong>Material Targets Rebuild:</strong> Automatic material target reconstruction when loading presets ensures textures apply to correct meshes</li>
+          <li><strong>Blend Shape Export Locking:</strong> Free users get baked blend shapes (static), Premium/Studio users retain editable blend shapes in exports</li>
+          <li><strong>Free GLB→FBX Converter Tool:</strong> New landing page at /free-glb-to-fbx-converter - convert 3D models with textures and animations included</li>
+          <li><strong>SEO Landing Pages:</strong> Fixed canonical URLs for proper indexing (unity-character-creator, unreal-character-creator, etc.)</li>
+          <li><strong>PostHog Analytics:</strong> Enhanced tracking for character exports, preset usage, and conversion metrics</li>
+          <li><strong>New Content:</strong> Additional clothing items, textures, and base mesh variations added to library</li>
+          <li><strong>Performance:</strong> Optimized preset loading with progressive rendering and improved material application timing</li>
+          <li><strong>Bug Fixes:</strong> Resolved preset clothing loading issues, fixed texture-color application order, corrected material domain tracking</li>
+        </ul>
+      </div>
+       <div class="version">
         <div class="version-header">
           <span class="arrow">▶</span>
           <h3>v0.1.1 - FBX Export & Texture Painter V2 And New Content</h3>
@@ -332,7 +359,7 @@
     </div>
   </section>
 
-  <footer style="background:#0a0a0a;padding:60px 20px 20px;text-align:center;border-top:1px solid #222;">
+  <footer id="footer" style="background:#0a0a0a;padding:60px 20px 20px;text-align:center;border-top:1px solid #222;">
     <div style="max-width:1200px;margin:0 auto;">
       
       <!-- Social Links -->
@@ -357,19 +384,20 @@
         <a href="privacy.html" style="color:#888;text-decoration:none;margin:0 15px;font-size:14px;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#888'">Privacy Policy</a>
         <a href="terms.html" style="color:#888;text-decoration:none;margin:0 15px;font-size:14px;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#888'">Terms of Service</a>
         <a href="refunds.html" style="color:#888;text-decoration:none;margin:0 15px;font-size:14px;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#888'">Refund Policy</a>
-        <a href="mailto:ayuodev@gmail.com" style="color:#888;text-decoration:none;margin:0 15px;font-size:14px;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#888'">Contact</a>
+        <a href="/cdn-cgi/l/email-protection#cbaab2bea4afaebd8baca6aaa2a7e5a8a4a6" style="color:#888;text-decoration:none;margin:0 15px;font-size:14px;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#888'">Contact</a>
       </div>
 
       <!-- Copyright -->
       <div style="color:#666;font-size:13px;margin-top:20px;">
-        © 2026 Morphara. All rights reserved. v0.1.1
+        © 2026 Morphara. All rights reserved. v0.1.2
       </div>
       
       <div style="color:#555;font-size:12px;margin-top:10px;">
-        Made with ❤️ by Ayuo ( indie developer )
+        Made with ❤️ by Indie Developers
       </div>
     </div>
   </footer>
+
 
   <!-- ============ SCRIPTS ============ -->
   <script>
