@@ -1,9 +1,9 @@
 import { supabase } from "../main.js";
 
-/* ================================================================
-   CONFIGURATION
-   ↓↓↓ PASTE YOUR STRIPE PRICE IDs HERE after creating them in Stripe ↓↓↓
-================================================================ */
+
+
+
+
 const WORKER_URL = "https://morphara.maroukayuob.workers.dev";
 
 const PRICES = {
@@ -16,23 +16,23 @@ const PRICES = {
   studio_yearly:   { priceId: "price_1T0WQtIAaSECAqpwWYvhtRqd", mode: "subscription", label: "Studio Yearly"   }
 };
 
-// Expose prices globally so main.js fetchAndDisplayPlan can match price IDs to plan names
+
 window._PRICES = PRICES;
 
-// supabase imported from main.js — single shared instance
 
-/* ================================================================
-   STRIPE CHECKOUT / UPGRADE
-================================================================ */
 
-// Plan tier order for upgrade detection
+
+
+
+
+
 const PLAN_TIER = { free: 0, premium: 1, studio: 2 };
 
 async function startCheckout(priceKey) {
   const price = PRICES[priceKey];
   if (!price) { console.error("Unknown price key:", priceKey); return; }
 
-  // Must be logged in
+
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
     document.getElementById("plans-overlay")?.classList.add("hidden");
@@ -44,37 +44,37 @@ async function startCheckout(priceKey) {
 
   const currentPlan = window._currentPlan || "free";
 
-  // ── Subscription plan button clicked ──
+
   if (price.mode === "subscription") {
     const targetPlan = priceKey.startsWith("studio") ? "studio" : "premium";
 
-    // Already on this exact plan
+
     if (targetPlan === currentPlan) {
       showToastGlobal(`You're already on the ${targetPlan} plan!`);
       return;
     }
 
-    // UPGRADE: user is on a paid plan and wants a higher tier
+
     if (PLAN_TIER[currentPlan] > 0 && PLAN_TIER[targetPlan] > PLAN_TIER[currentPlan]) {
       await handleUpgrade(priceKey, price, session, currentPlan, targetPlan);
       return;
     }
 
-    // DOWNGRADE: not supported inline — guide them
+
     if (PLAN_TIER[currentPlan] > 0 && PLAN_TIER[targetPlan] < PLAN_TIER[currentPlan]) {
       showToastGlobal("To downgrade, cancel your current plan first — your access continues until the billing period ends.");
       return;
     }
 
-    // FREE → PAID: normal Stripe Checkout flow
+
   }
 
-  // ── Normal checkout (new sub or credit purchase) ──
+
   await runCheckout(price, session);
 }
 
 async function handleUpgrade(priceKey, price, session, currentPlan, targetPlan) {
-  // Show confirmation dialog with proration explanation
+
   const confirmed = confirm(
     `Upgrade from ${currentPlan.toUpperCase()} → ${targetPlan.toUpperCase()}?\n\n` +
     `• Your card will be charged the prorated difference immediately\n` +
@@ -109,19 +109,19 @@ async function handleUpgrade(priceKey, price, session, currentPlan, targetPlan) 
       return;
     }
 
-    // 3D Secure / requires further action
+
     if (data.requiresAction && data.clientSecret) {
       showToastGlobal("Additional payment verification required — redirecting...");
-      // If you have Stripe.js loaded, confirm the payment:
-      // const stripe = Stripe(YOUR_PUBLISHABLE_KEY);
-      // await stripe.confirmCardPayment(data.clientSecret);
-      // For now, send them to billing portal as fallback
+
+
+
+
       window.open("https://billing.stripe.com/p/login", "_blank");
       if (btn) { btn.disabled = false; btn.textContent = originalText; }
       return;
     }
 
-    // Success — update local state immediately
+
     window._currentPlan = data.newPlan;
 
     showToastGlobal(
@@ -129,14 +129,14 @@ async function handleUpgrade(priceKey, price, session, currentPlan, targetPlan) 
       (data.creditsAdded > 0 ? `+${data.creditsAdded} credits added.` : "")
     );
 
-    // Refresh plan display + credits
+
     setTimeout(async () => {
       if (typeof window.fetchAndDisplayPlan === "function") {
         const { data: { session: s } } = await supabase.auth.getSession();
         if (s) await window.fetchAndDisplayPlan(s.user.id);
       }
 
-      // Refresh credits count
+
       const { data: credData } = await supabase
         .from("users")
         .select("credits")
@@ -147,7 +147,7 @@ async function handleUpgrade(priceKey, price, session, currentPlan, targetPlan) 
         if (el) el.textContent = credData.credits;
       }
 
-      // Close plans overlay
+
       document.getElementById("plans-overlay")?.classList.add("hidden");
       document.body.style.overflow = "";
     }, 500);
@@ -196,9 +196,9 @@ async function runCheckout(price, session) {
   }
 }
 
-/* ================================================================
-   HANDLE RETURN FROM STRIPE
-================================================================ */
+
+
+
 function handleStripeReturn() {
   const params = new URLSearchParams(window.location.search);
   const result = params.get("payment");
@@ -206,7 +206,7 @@ function handleStripeReturn() {
   if (result === "success") {
     window.history.replaceState({}, "", window.location.pathname);
 
-    // Wait 3 seconds for webhook to process, then refresh credits + plan
+
     setTimeout(async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
@@ -222,7 +222,7 @@ function handleStripeReturn() {
         if (el) el.textContent = data.credits;
       }
 
-      // Refresh plan display (calls fetchAndDisplayPlan from main.js)
+
       if (typeof fetchAndDisplayPlan === "function") {
         await fetchAndDisplayPlan(session.user.id);
       }
@@ -237,9 +237,9 @@ function handleStripeReturn() {
   }
 }
 
-/* ================================================================
-   TOAST HELPER
-================================================================ */
+
+
+
 function showToastGlobal(message) {
   const toast = document.getElementById("toast");
   if (!toast) return;
@@ -253,15 +253,15 @@ function showToastGlobal(message) {
   }, 2500);
 }
 
-/* ================================================================
-   PLANS OVERLAY CONTROLS
-================================================================ */
+
+
+
 export function initPlansOverlayControls() {
   const plansOverlay  = document.getElementById("plans-overlay");
   const closePlansBtn = document.getElementById("close-plans");
   if (!plansOverlay || !closePlansBtn) return;
 
-  // ── Open / Close ──
+
   document.querySelectorAll(".open-plans").forEach(btn => {
     btn.addEventListener("click", () => openOverlay("plans"));
   });
@@ -271,12 +271,12 @@ export function initPlansOverlayControls() {
   closePlansBtn.addEventListener("click", closeOverlay);
   plansOverlay.querySelector(".overlay-backdrop")?.addEventListener("click", closeOverlay);
 
-  // ── Tabs ──
+
   document.querySelectorAll(".tab-btn").forEach(btn => {
     btn.addEventListener("click", () => switchTab(btn.dataset.tab));
   });
 
-  // ── Billing toggle ──
+
   const billingToggle = document.querySelector(".toggle-switch");
   const billingLabels = document.querySelectorAll(".billing-label");
   const overlayPanel  = document.querySelector(".overlay-panel");
@@ -298,7 +298,7 @@ export function initPlansOverlayControls() {
     });
   });
 
-  // ── Subscription buttons ──
+
   const premiumBtn = document.querySelector(".plan-card.premium .plan-btn");
   if (premiumBtn) {
     premiumBtn.addEventListener("click", () => {
@@ -313,7 +313,7 @@ export function initPlansOverlayControls() {
     });
   }
 
-  // ── Credit pack buttons ──
+
   const creditPacks = document.querySelectorAll(".credit-pack");
   const creditKeys  = ["credits_5", "credits_10", "credits_25"];
   creditPacks.forEach((pack, i) => {
@@ -322,10 +322,10 @@ export function initPlansOverlayControls() {
     });
   });
 
-  // ── Handle Stripe return ──
+
   handleStripeReturn();
 
-  /* ---- Helpers ---- */
+
   function openOverlay(tab) {
     plansOverlay.classList.remove("hidden");
     document.body.style.overflow = "hidden";

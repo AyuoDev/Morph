@@ -1,19 +1,19 @@
-// js/TexturePainter.js
-// ============================================================================
-// TEXTURE PAINTER CLASS — Core drawing engine (tools, brush, bucket fill)
-// ============================================================================
+
+
+
+
 import * as THREE from "three";
 
 export class TexturePainter {
   constructor({ canvas, mesh, material, texture }) {
     this.canvas   = canvas;
-    // FIX: Add willReadFrequently option to prevent performance warnings
+
     this.ctx      = canvas.getContext("2d", { willReadFrequently: true });
     this.mesh     = mesh;
     this.material = material;
     this.texture  = texture;
 
-    this.tool      = "draw"; // draw | erase | move | bucket
+    this.tool      = "draw";
     this.color     = "#ffffff";
     this.brushSize = 10;
     this.opacity   = 1.0;
@@ -22,7 +22,7 @@ export class TexturePainter {
     this._bindDefaults();
   }
 
-  /* ── Setup ─────────────────────────────────────────────────────────── */
+
 
   _bindDefaults() {
     this.ctx.imageSmoothingEnabled = false;
@@ -30,7 +30,7 @@ export class TexturePainter {
     this.ctx.lineJoin = "round";
   }
 
-  /* ── Texture loading ────────────────────────────────────────────────── */
+
 
   loadFromTexture(texture) {
     const image = texture.image;
@@ -49,14 +49,14 @@ export class TexturePainter {
     this.applyToMaterial();
   }
 
-  /* ── Tool setters ───────────────────────────────────────────────────── */
+
 
   setTool(tool)      { this.tool      = tool; }
   setColor(color)    { this.color     = color; }
   setBrushSize(size) { this.brushSize = size; }
   setOpacity(value)  { this.opacity   = value; }
 
-  /* ── Drawing ────────────────────────────────────────────────────────── */
+
 
   startDraw(x, y) {
     if (this.tool === "move") return;
@@ -99,7 +99,7 @@ export class TexturePainter {
     this.ctx.globalCompositeOperation = "source-over";
   }
 
-  /* ── Bucket fill ────────────────────────────────────────────────────── */
+
 
   bucketFill(startX, startY) {
     const ctx = this.ctx;
@@ -136,14 +136,14 @@ export class TexturePainter {
     ctx.putImageData(imageData, 0, 0);
   }
 
-  /* ── Material ───────────────────────────────────────────────────────── */
+
 
   applyToMaterial() {
     this.material.map = this.texture;
     this.material.needsUpdate = true;
   }
 
-  /* ── Private helpers ────────────────────────────────────────────────── */
+
 
   _hexToRgba(hex, opacity = 1) {
     const r = parseInt(hex.slice(1, 3), 16);
@@ -152,18 +152,18 @@ export class TexturePainter {
     return [r, g, b, Math.floor(opacity * 255)];
   }
 
-  // kept for backward compat
+
   hexToRgba(hex, opacity = 1) { return this._hexToRgba(hex, opacity); }
 }
 
 
-// ============================================================================
-// MESH TEXTURE DATA MANAGEMENT
-// Manages per-mesh texture canvases stored in main.js's meshTextureData object.
-// All functions receive meshTextureData by reference via the import.
-// ============================================================================
 
-// Singleton store — main.js imports and mutates this directly
+
+
+
+
+
+
 export const meshTextureData = {};
 
 const MAX_HISTORY = 20;
@@ -292,9 +292,9 @@ export function updateMaterialProperty(meshId, textureName, property, value, mat
 }
 
 
-// ============================================================================
-// UNDO / REDO
-// ============================================================================
+
+
+
 
 export function saveToHistory(meshId, textureName) {
   const texData = meshTextureData[meshId]?.textures[textureName];

@@ -1,6 +1,6 @@
-/* =========================================================
-   GLOBAL VARIABLES & RESET
-========================================================= */
+
+
+
 
 :root {
   --bg-dark: #1b1b1b;
@@ -9,7 +9,7 @@
 
   --panel: #1a1a1a;
 
-  --accent: #7c5cff; /* Morphara accent */
+  --accent: #7c5cff;
   --accent-app: #4aa3ff;
 
   --text: #ffffff;
@@ -28,11 +28,11 @@ body {
   color: var(--text);
 }
 
-/* =========================================================
-   ===================== LANDING PAGE ======================
-========================================================= */
 
-/* ---------- HERO ---------- */
+
+
+
+
 
 .hero {
   position: relative;
@@ -99,7 +99,7 @@ body {
   transform: translateY(-2px);
   opacity: 0.9;
 }
-/* ---------- top bar ---------- */
+
 .brand {
   display: flex;
   align-items: center;
@@ -113,7 +113,7 @@ body {
   width: 28px;
   height: 28px;
 }
-/* ---------- SECTIONS ---------- */
+
 
 section {
   padding: 80px 20px;
@@ -126,7 +126,7 @@ h2 {
   margin-bottom: 24px;
 }
 
-/* ---------- CHANGELOG ---------- */
+
 
 .changelog {
   background: var(--panel);
@@ -143,7 +143,7 @@ h2 {
   padding-left: 20px;
   color: var(--muted);
 }
-/* ---------- FOOTER ---------- */
+
 
 footer {
   text-align: center;
@@ -157,7 +157,7 @@ footer {
     font-size: 2.2rem;
   }
 }
-/* =========== Features ========== */
+
 .feature {
   display: flex;
   align-items: center;
@@ -174,7 +174,7 @@ footer {
   max-width: 520px;
   border-radius: 14px;
   box-shadow: 0 20px 60px rgba(0,0,0,0.6);
-  pointer-events: none; /* 🔒 no interaction */
+  pointer-events: none;
 }
 
 .feature-text {
@@ -194,9 +194,9 @@ footer {
   flex-direction: row-reverse;
 }
 
-/* ===============================
-   CHANGELOG ACCORDION
-================================ */
+
+
+
 
 .changelog {
   max-width: 900px;
@@ -228,7 +228,7 @@ footer {
   color: #aaa;
 }
 
-/* Collapsed */
+
 .version ul {
   max-height: 0;
   overflow: hidden;
@@ -238,9 +238,9 @@ footer {
   transition: max-height 0.35s ease, opacity 0.25s ease;
 }
 
-/* Expanded */
+
 .version.open ul {
-  max-height: 500px; /* plenty for changelog */
+  max-height: 500px;
   opacity: 1;
   margin-top: 8px;
 }
@@ -254,7 +254,7 @@ footer {
   color: #bbb;
   margin-bottom: 6px;
 }
-/* ================= Behind the Scenes ================= */
+
 
 .behind-scenes {
   padding: 80px 6%;
@@ -319,23 +319,23 @@ footer {
   border-radius: 6px;
 }
 
-/* Responsive */
+
 @media (max-width: 900px) {
   .behind-scenes-inner {
     grid-template-columns: 1fr;
   }
 }
 
-/* =========================================================
-   ====================== APP (EDITOR) =====================
-========================================================= */
+
+
+
 
 body.app {
   background: #111;
   overflow: hidden;
 }
 
-/* ---------- TOP PANEL ---------- */
+
 .app-brand {
   display: flex;
   align-items: center;
@@ -410,7 +410,7 @@ body.app {
   color: var(--accent-app);
 }
 
-/* ---------- PANELS ---------- */
+
 
 .panel {
   position: absolute;
@@ -431,7 +431,7 @@ body.app {
 }
 
 
-/* ---------- BLEND SHAPES ---------- */
+
 
 .blend-row {
   display: flex;
@@ -452,7 +452,7 @@ body.app {
   flex: 1;
 }
 
-/* ---------- MATERIAL ---------- */
+
 #material-panel {
   padding: 14px;
   display: flex;
@@ -541,7 +541,7 @@ body.app {
 .texture-item.active {
   outline: 2px solid #6cf;
 }
-/* cards ui */
+
 .preview-canvas {
   width: 100%;
   height: 120px;
@@ -551,7 +551,7 @@ body.app {
 }
 
 
-/* ---------- Base Meshes ---------- */
+
 .base-mesh-card {
   position: relative;
   display: flex;
@@ -616,7 +616,7 @@ body.app {
   display: block;
 }
 
-/* ---------- CLOTHES ---------- */
+
 
 .clothes-category {
   width: 100%;
@@ -717,12 +717,12 @@ body.app {
   margin-top: 6px;
   line-height: 1.2;
 
-  height: 28px;       /* 🔑 same label height */
+  height: 28px;
   overflow: hidden;
 }
 
 
-/* ---------- EXPORT MENU ---------- */
+
 #export-menu {
   position: fixed;
   top: 70px;
@@ -754,7 +754,7 @@ body.app {
 .export-option:hover {
   background: var(--accent-app);
 }
-/* ================= RANDOMIZER PANEL ================= */
+
 
 .rand-title {
   margin: 0 0 14px;
@@ -798,7 +798,7 @@ body.app {
   user-select: none;
 }
 
-/* ---------- ACTION BUTTONS ---------- */
+
 
 .rand-actions {
   display: flex;
@@ -841,7 +841,7 @@ body.app {
   opacity: 0.4;
   cursor: not-allowed;
 }
-/* ---------- TEXTURE PAINTER ---------- */
+
 .paint-btn {
   width: 100%;
   padding: 8px;
@@ -854,7 +854,7 @@ body.app {
 .hidden {
   display: none !important;
 }
-/* ================= TEXTURE PAINTER ================= */
+
 
 #texture-painter-mode {
   position: absolute;
@@ -864,14 +864,14 @@ body.app {
   z-index: 1000;
 }
 
-/* LEFT PREVIEW */
+
 #painter-viewport {
   width: 20%;
   background: #000;
   border-right: 1px solid #222;
 }
 
-/* RIGHT UI */
+
 #painter-ui {
   width: 80%;
   display: flex;
@@ -879,7 +879,7 @@ body.app {
   background: #141414;
 }
 
-/* TOP BAR */
+
 .painter-top-bar {
   height: 48px;
   display: flex;
@@ -906,13 +906,13 @@ body.app {
   color: #fff;
 }
 
-/* CONTENT */
+
 .painter-content {
   flex: 1;
   display: flex;
 }
 
-/* PANELS */
+
 .painter-panel {
   padding: 12px;
   border-right: 1px solid #222;
@@ -926,7 +926,7 @@ body.app {
   flex-direction: column;
 }
 
-/* TOOLS */
+
 .tools-panel {
   flex: 1;
 }
@@ -974,7 +974,7 @@ body.app {
   background-size: 20px 20px;
   background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
 }
-/* TOAST NOTIFICATION */
+
 .toast {
   position: fixed;
   bottom: 20px;
@@ -999,7 +999,7 @@ body.app {
 .toast.hidden {
   display: none;
 }
-/* ================= UV TOGGLE BUTTON ================= */
+
 
 #toggle-uv {
   background: #2a2a2a;
@@ -1011,7 +1011,7 @@ body.app {
   font-weight: 600;
   letter-spacing: 0.5px;
   cursor: pointer;
-  transition: 
+  transition:
     background 0.15s ease,
     color 0.15s ease,
     border-color 0.15s ease;
@@ -1022,14 +1022,14 @@ body.app {
   color: #fff;
 }
 
-/* ACTIVE STATE (UV ON) */
+
 #toggle-uv.active {
   background: #4a6cff;
   color: #fff;
   border-color: #4a6cff;
   box-shadow: 0 0 0 1px rgba(74,108,255,0.35);
 }
-/* ================= UV TOOL CONTROLS ================= */
+
 
 .uv-panel {
   border-top: 1px solid #2a2a2a;
@@ -1043,7 +1043,7 @@ body.app {
   gap: 10px;
 }
 
-/* Eye button */
+
 .icon-btn {
   width: 30px;
   height: 30px;
@@ -1067,14 +1067,14 @@ body.app {
   color: #fff;
 }
 
-/* UV opacity slider */
+
 #uv-opacity {
   flex: 1;
   height: 4px;
   accent-color: #4a6cff;
 }
 
-/* =================== User and Plans STYLES ================== */
+
 .site-topbar {
   position: fixed;
   top: 0;
@@ -1088,7 +1088,7 @@ body.app {
   z-index: 100;
 }
 .top-right {
-  margin-left: auto;     /* 🔥 THIS pushes it to the edge */
+  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1136,23 +1136,23 @@ body.app {
   align-items: center;
   gap: 6px;
 
-  min-width: 80px;          /* 👈 THIS is the key */
+  min-width: 80px;
   justify-content: center;
 
   font-weight: 600;
 }
 .top-actions {
-  position: relative; /* 🔑 THIS IS THE KEY */
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
 }
-/* ================= TOP DROPDOWNS ================= */
+
 
 .top-dropdown {
   position: absolute;
-  top: 100%;          /* directly under buttons */
-  right: 0;           /* align to right edge */
+  top: 100%;
+  right: 0;
   margin-top: 6px;
 
   background: #1c1c1c;
@@ -1184,7 +1184,7 @@ body.app {
 .dropdown-item:hover {
   background: rgba(255,255,255,0.08);
 }
-/* ================= Plans and Credit OVERLAY ================= */
+
 
 .overlay {
   position: fixed;
@@ -1208,7 +1208,7 @@ body.app {
   overflow: hidden;
 }
 
-/* Animated gradient layer */
+
 .overlay-backdrop::before {
   content: "";
   position: absolute;
@@ -1250,14 +1250,14 @@ body.app {
   box-shadow: 0 30px 80px rgba(0,0,0,0.6);
 }
 
-/* HEADER */
+
 .overlay-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-/* TABS */
+
 .overlay-tabs {
   display: flex;
   gap: 10px;
@@ -1279,7 +1279,7 @@ body.app {
   color: #fff;
 }
 
-/* CONTENT */
+
 .tab-content {
   display: none;
 }
@@ -1288,7 +1288,7 @@ body.app {
   display: block;
 }
 
-/* PLANS */
+
 .plans-grid,
 .credits-grid {
   display: grid;
@@ -1438,7 +1438,7 @@ body.app {
 .yearly .price-yearly {
   display: inline;
 }
-/* ================= Character Preview ================= */
+
 
 .plans-visual {
   margin: 16px 0 24px;
@@ -1468,7 +1468,7 @@ body.app {
   display: block;
 }
 
-/* Soft vignette + depth */
+
 .visual-overlay {
   position: absolute;
   inset: 0;
@@ -1477,7 +1477,7 @@ body.app {
     linear-gradient(to top, rgba(0,0,0,0.4), transparent 40%);
   pointer-events: none;
 }
-/* ================= Newsletter ================= */
+
 
 .newsletter {
   padding: 70px 6%;
@@ -1535,13 +1535,13 @@ body.app {
   color: #9fe;
 }
 
-/* Mobile */
+
 @media (max-width: 600px) {
   #newsletter-form {
     flex-direction: column;
   }
 }
-/* ================= LAUNCH OVERLAY ================= */
+
 
 .launch-overlay {
   position: fixed;
@@ -1617,7 +1617,7 @@ body.app {
   font-weight: 600;
   cursor: pointer;
 }
-/* ================= AUTH OVERLAY ================= */
+
 
 .auth-panel {
   width: 420px;
@@ -1700,9 +1700,9 @@ body.app {
   text-align: center;
 }
 
-/* =========================================================
-   EXPORT & RANDOMIZER OVERLAYS
-========================================================= */
+
+
+
 
 @keyframes spin {
   to { transform: rotate(360deg); }
@@ -1774,87 +1774,87 @@ body.app {
 }
 
 
-/* ============================================================================
-   RESPONSIVE DESIGN - MEDIA QUERIES
-   Mobile First Approach: Tablets → Mobile → Small Mobile
-   ============================================================================ */
 
-/* ========================================
-   TABLETS (768px - 1024px)
-   ======================================== */
+
+
+
+
+
+
+
 @media (max-width: 1024px) {
-  
-  /* Landing Page Hero */
+
+
   .hero {
     height: 70vh;
   }
-  
+
   .hero h1 {
     font-size: 2.5rem;
   }
-  
+
   .hero p {
     font-size: 1rem;
   }
-  
-  /* Features Section */
+
+
   .feature {
     flex-direction: column;
     gap: 40px;
     padding: 60px 20px;
   }
-  
+
   .feature-reverse {
     flex-direction: column;
   }
-  
+
   .feature-media video {
     max-width: 100%;
   }
-  
-  /* Morphara App - Top Bar */
+
+
   .app-brand .app-title {
     font-size: 18px;
   }
-  
+
   .app-version {
     font-size: 10px;
   }
-  
-  /* Morphara App - Main Layout */
+
+
   .top-section {
     width: 100% !important;
     max-width: none !important;
   }
-  
-  /* Base Mesh/Clothing Cards - Reduce to 3 columns */
+
+
   .basemesh-cards,
   .clothing-cards {
     grid-template-columns: repeat(3, 1fr) !important;
     gap: 12px;
   }
-  
-  /* Right Panel - Reduce width */
+
+
   .top-right {
     width: 280px !important;
   }
-  
-  /* Material Cards */
+
+
   .material-card {
     padding: 12px;
   }
-  
-  /* Blend Shape Sliders */
+
+
   .blend-shape-item {
     padding: 10px 12px;
   }
-  
-  /* Animation Cards */
+
+
   .animation-cards {
     gap: 10px;
   }
-  
-  
+
+
 .animation-card {
   background: #1a1a1a;
   border: 2px solid #2a2a2a;
@@ -1900,365 +1900,365 @@ body.app {
   }
 }
 
-/* ========================================
-   MOBILE (320px - 768px)
-   ======================================== */
+
+
+
 @media (max-width: 768px) {
-  
-  /* ========== LANDING PAGE ========== */
-  
-  /* Top Bar */
+
+
+
+
   .site-topbar {
     padding: 12px 16px;
   }
-  
+
   .site-topbar .brand img {
     width: 28px;
     height: 28px;
   }
-  
+
   .site-topbar .brand span {
     font-size: 16px;
   }
-  
-  /* Hero */
+
+
   .hero {
     height: 60vh;
   }
-  
+
   .hero h1 {
     font-size: 2rem;
     padding: 0 20px;
   }
-  
+
   .hero p {
     font-size: 0.95rem;
     padding: 0 20px;
   }
-  
+
   .hero button {
     padding: 12px 28px;
     font-size: 14px;
   }
-  
-  /* Features */
+
+
   .feature {
     padding: 40px 16px;
     gap: 30px;
   }
-  
+
   .feature h2 {
     font-size: 1.5rem;
   }
-  
-  /* Behind the Scenes */
+
+
   .behind-scenes-inner {
     flex-direction: column;
     gap: 30px;
   }
-  
-  /* Changelog */
+
+
   .changelog .version {
     padding: 16px;
   }
-  
+
   .version h3 {
     font-size: 1rem;
   }
-  
-  /* Newsletter */
+
+
   .newsletter-inner {
     padding: 0 20px;
   }
-  
+
   .newsletter-inner h2 {
     font-size: 1.5rem;
   }
-  
+
   #newsletter-form {
     flex-direction: column;
   }
-  
+
   #newsletter-form input {
     width: 100%;
   }
-  
+
   #newsletter-form button {
     width: 100%;
   }
-  
-  /* Footer */
+
+
   footer > div {
     padding: 0 20px;
   }
-  
+
   footer a {
     display: block;
     margin: 8px 0;
   }
-  
-  /* ========== MORPHARA APP ========== */
-  
-  /* Top Bar */
+
+
+
+
   .app-brand {
     gap: 8px;
   }
-  
+
   .app-icon {
     width: 28px !important;
     height: 28px !important;
   }
-  
+
   .app-title {
     font-size: 16px !important;
   }
-  
+
   .app-version {
     font-size: 9px !important;
   }
-  
+
   .user-info {
     gap: 8px;
   }
-  
+
   .user-email {
-    display: none; /* Hide email on mobile */
+    display: none;
   }
-  
+
   .credits-badge {
     font-size: 12px;
     padding: 4px 10px;
   }
-  
+
   .top-right-controls {
     gap: 6px;
   }
-  
+
   .top-right-controls button {
     padding: 6px 12px;
     font-size: 12px;
   }
-  
-  /* Main Layout - Stack Vertically */
+
+
   .workspace {
     flex-direction: column !important;
     height: auto !important;
   }
-  
+
   .top-section {
     width: 100% !important;
     height: auto !important;
     max-height: none !important;
   }
-  
+
   .top-left {
     height: auto !important;
     border-right: none !important;
     border-bottom: 1px solid #2a2a2a;
   }
-  
+
   .top-right {
     width: 100% !important;
     height: auto !important;
     max-height: 400px;
     overflow-y: auto;
   }
-  
-  /* Canvas - Full Width, Smaller Height */
+
+
   .canvas-wrapper {
     height: 50vh !important;
     min-height: 300px;
   }
-  
+
   canvas {
     width: 100% !important;
     height: 100% !important;
   }
-  
-  /* Base Mesh Cards - 2 Columns */
+
+
   .basemesh-cards {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 10px;
     padding: 12px;
   }
-  
+
   .basemesh-card {
     padding: 10px;
   }
-  
+
   .basemesh-card h3 {
     font-size: 12px;
   }
-  
-  /* Clothing Cards - 2 Columns */
+
+
   .clothing-cards {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 10px;
     padding: 12px;
   }
-  
+
   .clothing-card {
     padding: 10px;
   }
-  
+
   .clothing-card h4 {
     font-size: 11px;
   }
-  
+
   .clothing-header {
     padding: 12px;
   }
-  
+
   .category-tabs {
     gap: 6px;
     padding: 0 12px;
   }
-  
+
   .category-tab {
     padding: 6px 12px;
     font-size: 11px;
   }
-  
-  /* Materials Panel */
+
+
   .materials-panel {
     padding: 12px;
   }
-  
+
   .material-card {
     padding: 10px;
   }
-  
+
   .material-label {
     font-size: 11px;
   }
-  
+
   .color-picker {
     width: 100%;
   }
-  
-  /* Blend Shapes Panel */
+
+
   .blend-shapes-panel {
     padding: 12px;
   }
-  
+
   .blend-shape-item {
     padding: 8px 10px;
   }
-  
+
   .blend-shape-label {
     font-size: 11px;
   }
-  
+
   .blend-shape-slider {
     width: 100%;
   }
-  
-  /* Bottom Panel - Animations */
+
+
   .bottom-panel {
     padding: 12px;
   }
-  
+
   .animation-cards {
     gap: 8px;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
-  
+
   .animation-card {
     min-width: 120px;
     padding: 8px;
   }
-  
+
   .animation-card h4 {
     font-size: 11px;
   }
-  
-  /* ========== MODALS / OVERLAYS ========== */
-  
-  /* Export Panel */
+
+
+
+
   .export-panel-overlay {
     padding: 20px;
   }
-  
+
   .export-panel-content {
     width: 95% !important;
     max-width: none;
     padding: 20px;
   }
-  
+
   .export-panel-header h2 {
     font-size: 1.3rem;
   }
-  
+
   .export-type-cards {
     flex-direction: column;
     gap: 12px;
   }
-  
+
   .export-type-card {
     width: 100%;
   }
-  
+
   .format-options {
     grid-template-columns: 1fr !important;
     gap: 10px;
   }
-  
+
   .format-btn {
     padding: 12px;
   }
-  
+
   .export-actions {
     flex-direction: column;
     gap: 10px;
   }
-  
+
   .export-actions button {
     width: 100%;
   }
-  
-  /* Plans Overlay */
+
+
   .plans-overlay .overlay-panel {
     width: 95% !important;
     max-width: none;
     padding: 20px;
   }
-  
+
   .overlay-header h2 {
     font-size: 1.3rem;
   }
-  
+
   .plan-toggle {
     transform: scale(0.9);
   }
-  
+
   .pricing-grid {
     grid-template-columns: 1fr !important;
     gap: 16px;
   }
-  
+
   .plan-card {
     padding: 20px;
   }
-  
+
   .plan-card h3 {
     font-size: 1.2rem;
   }
-  
+
   .price {
     font-size: 1.8rem;
   }
-  
+
   .credit-packs {
     grid-template-columns: 1fr !important;
     gap: 12px;
   }
-  
-  /* Texture Painter */
+
+
   #texture-painter-mode {
     flex-direction: column;
   }
-  
+
   .painter-sidebar {
     width: 100% !important;
     height: auto;
@@ -2267,136 +2267,136 @@ body.app {
     border-right: none !important;
     border-bottom: 1px solid #333;
   }
-  
+
   #painter-viewport {
     width: 100% !important;
     height: 60vh;
   }
-  
+
   .tool-btn {
     padding: 10px;
     font-size: 12px;
   }
-  
+
   .painter-control {
     padding: 10px;
   }
-  
+
   .painter-control label {
     font-size: 11px;
   }
-  
-  /* Randomizer Loading */
+
+
   #randomizer-loading .spinner {
     width: 50px;
     height: 50px;
   }
-  
-  /* Legal Pages */
+
+
   .legal-container {
     margin: 40px auto;
     padding: 20px;
   }
-  
+
   .legal-container h1 {
     font-size: 1.5rem;
   }
-  
+
   .legal-container h2 {
     font-size: 1.1rem;
   }
-  
+
   .legal-container p,
   .legal-container li {
     font-size: 14px;
   }
 }
 
-/* ========================================
-   SMALL MOBILE (320px - 480px)
-   ======================================== */
+
+
+
 @media (max-width: 480px) {
-  
-  /* Landing Page */
+
+
   .hero h1 {
     font-size: 1.6rem;
   }
-  
+
   .hero p {
     font-size: 0.9rem;
   }
-  
+
   .feature h2 {
     font-size: 1.3rem;
   }
-  
+
   .feature p {
     font-size: 0.9rem;
   }
-  
-  /* App Cards - Single Column */
+
+
   .basemesh-cards,
   .clothing-cards {
     grid-template-columns: 1fr !important;
   }
-  
-  /* Smaller Touch Targets */
+
+
   button {
-    min-height: 44px; /* iOS recommended touch target */
+    min-height: 44px;
   }
-  
-  /* Canvas - Smaller on tiny screens */
+
+
   .canvas-wrapper {
     height: 40vh !important;
     min-height: 250px;
   }
-  
-  /* Export Panel */
+
+
   .export-panel-content {
     padding: 16px;
   }
-  
-  /* Plans */
+
+
   .plan-card {
     padding: 16px;
   }
-  
+
   .price {
     font-size: 1.5rem;
   }
 }
 
-/* ========================================
-   LANDSCAPE ORIENTATION (Mobile)
-   ======================================== */
+
+
+
 @media (max-width: 768px) and (orientation: landscape) {
-  
-  /* Make canvas larger in landscape */
+
+
   .canvas-wrapper {
     height: 70vh !important;
   }
-  
-  /* Hide some UI elements to maximize canvas space */
+
+
   .top-left {
     max-height: 30vh;
     overflow-y: auto;
   }
-  
+
   .top-right {
     max-height: 30vh;
   }
-  
+
   .bottom-panel {
     max-height: 25vh;
   }
 }
 
-/* ========================================
-   TOUCH DEVICE OPTIMIZATIONS
-   ======================================== */
+
+
+
 @media (hover: none) and (pointer: coarse) {
-  
-  /* Larger touch targets */
+
+
   .basemesh-card,
   .clothing-card,
   .animation-card,
@@ -2405,30 +2405,30 @@ body.app {
     cursor: pointer;
     -webkit-tap-highlight-color: rgba(124, 92, 255, 0.2);
   }
-  
-  /* Better slider touch targets */
+
+
   input[type="range"] {
     height: 30px;
   }
-  
+
   input[type="range"]::-webkit-slider-thumb {
     width: 20px;
     height: 20px;
   }
-  
+
   input[type="range"]::-moz-range-thumb {
     width: 20px;
     height: 20px;
   }
-  
-  /* Remove hover effects on touch devices */
+
+
   .basemesh-card:hover,
   .clothing-card:hover,
   .animation-card:hover {
     transform: none;
   }
-  
-  /* Prevent text selection during touch interactions */
+
+
   .basemesh-cards,
   .clothing-cards,
   .animation-cards {
@@ -2437,9 +2437,9 @@ body.app {
   }
 }
 
-/* ========================================
-   PRINT STYLES (Bonus)
-   ======================================== */
+
+
+
 @media print {
   .site-topbar,
   .top-right-controls,
@@ -2447,19 +2447,19 @@ body.app {
   button {
     display: none;
   }
-  
+
   .canvas-wrapper {
     height: auto;
     page-break-inside: avoid;
   }
 }
-/* ============================================================================
-   v0.1.1 UI OVERHAUL - ADD TO style.css
-   ============================================================================ */
 
-/* ========================================
-   BLEND SHAPE CATEGORIZED PANELS
-   ======================================== */
+
+
+
+
+
+
 
 .blend-category {
   background: #1f1f1f;
@@ -2522,7 +2522,7 @@ body.app {
   padding: 0 12px;
 }
 
-/* Special category (Gender) - highlighted */
+
 .blend-category.special {
   border-color: #7c5cff;
   box-shadow: 0 0 20px rgba(124, 92, 255, 0.2);
@@ -2536,9 +2536,9 @@ body.app {
   color: #7c5cff;
 }
 
-/* ========================================
-   BASE MESH CARDS - 2 COLUMN GRID
-   ======================================== */
+
+
+
 
 .basemesh-cards {
   display: grid !important;
@@ -2547,7 +2547,7 @@ body.app {
   padding: 12px;
 }
 
-/* Animation Cards - Proper Heights */
+
 .animation-card {
   position: relative;
   display: flex;
@@ -2588,7 +2588,7 @@ body.app {
   display: flex;
   align-items: center;
   gap: 3px;
-  pointer-events: none; /* Don't block card clicks */
+  pointer-events: none;
 }
 
 .credit-badge::before {
@@ -2596,9 +2596,9 @@ body.app {
   font-size: 10px;
 }
 
-/* ========================================
-   ANIMATION CARDS - 2 COLUMN GRID
-   ======================================== */
+
+
+
 
 .animation-cards {
   display: grid !important;
@@ -2610,12 +2610,12 @@ body.app {
 }
 
 .animation-card {
-  min-width: auto !important; /* Remove horizontal scroll min-width */
+  min-width: auto !important;
 }
 
-/* ========================================
-   CLOTHING CATEGORY BUTTONS WITH ICONS
-   ======================================== */
+
+
+
 
 .clothes-category {
   display: flex !important;
@@ -2666,32 +2666,32 @@ body.app {
   transform: scale(1.1);
 }
 
-/* ========================================
-   RESPONSIVE ADJUSTMENTS
-   ======================================== */
+
+
+
 
 @media (max-width: 768px) {
   .basemesh-cards {
-    grid-template-columns: 1fr !important; /* Single column on mobile */
+    grid-template-columns: 1fr !important;
   }
-  
+
   .animation-cards {
     grid-template-columns: 1fr !important;
   }
-  
+
   .blend-category-icon {
     width: 20px;
     height: 20px;
     margin-right: 8px;
   }
-  
+
   .blend-category-name {
     font-size: 13px;
   }
 }
 
 @media (max-width: 480px) {
-  
+
 .animation-card {
   max-height: 160px !important;
 }
@@ -2705,14 +2705,14 @@ body.app {
     font-size: 10px;
     padding: 3px 8px;
   }
-  
+
   .clothes-category-icon {
     width: 16px;
     height: 16px;
   }
 }
 
-/* Fix: Prevent preview models from rendering outside panel bounds */
+
 #animations-panel {
   overflow: hidden !important;
   position: relative;
@@ -2726,10 +2726,10 @@ body.app {
 #clothes-items-panel {
   overflow-y: auto !important;
   overflow-x: hidden !important;
-  /* position: relative removed - let .panel-right handle positioning */
+
 }
 
-/* Allow scrolling inside panel content, but clip previews */
+
 .basemesh-cards,
 .clothes-items,
 #animations-list {
@@ -2739,15 +2739,15 @@ body.app {
 }
 
 
-/* Fix: Top bar above preview canvas */
+
 #top-panel {
   z-index: 1000 !important;
 }
 
 
-/* ============================================================================
-   ANIMATION CARD STYLES - FINAL (Override all previous rules)
-   ============================================================================ */
+
+
+
 
 .animation-card {
   background: #1a1a1a !important;
@@ -2790,11 +2790,11 @@ body.app {
   z-index: 100;
 }
 
-/* ============================================================================
-   MOVED FROM HTML <style> BLOCK
-   ============================================================================ */
 
-/* Active card states */
+
+
+
+
 .clothing-card.active,
 .clothing-card-none.active {
   border: 2px solid #6c63ff !important;
@@ -2806,7 +2806,7 @@ body.app {
   box-shadow: 0 0 8px rgba(108, 99, 255, 0.4);
 }
 
-/* Active plan card */
+
 .plan-card.active-plan {
   border: 2px solid #6c63ff !important;
   position: relative;
@@ -2832,7 +2832,7 @@ body.app {
   cursor: not-allowed;
 }
 
-/* Plan badge next to user button */
+
 #plan-badge {
   font-size: 10px;
   font-weight: 700;
@@ -2844,7 +2844,7 @@ body.app {
   color: #fff;
 }
 
-/* Export panel hover states */
+
 .export-type-card:hover {
   background: #333 !important;
 }
@@ -2858,12 +2858,12 @@ body.app {
 }
 
 
-/* ============================================================================
-   SETTINGS OVERLAY — Centered modal (moved from inline HTML styles)
-   ============================================================================ */
+
+
+
 
 #settings-overlay {
-  display: none;              /* hidden by default; JS sets display:flex to open */
+  display: none;
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.75);
@@ -2975,9 +2975,9 @@ body.app {
 }
 
 
-/* ============================================================================
-   EXPORT PANEL — Inline styles promoted to classes
-   ============================================================================ */
+
+
+
 
 .export-panel-close-btn {
   position: absolute;
@@ -3077,7 +3077,7 @@ body.app {
   color: #888;
 }
 
-/* Randomizer loading overlay content */
+
 .randomizer-loading-content {
   text-align: center;
 }
@@ -3097,7 +3097,7 @@ body.app {
   margin: 0 auto 20px;
 }
 
-/* Material panel inline selects/labels */
+
 .material-select {
   width: 100%;
   padding: 8px;
@@ -3149,36 +3149,36 @@ body.app {
   cursor: pointer;
 }
 
-/* Clothes panel heading */
+
 .panel-heading {
   margin-top: 0;
   color: #fff;
   font-size: 14px;
 }
 
-/* Reset texture button in painter */
+
 #reset-texture-btn {
   background: #ff5555;
   margin-top: 12px;
 }
 
-/* App brand clickable */
+
 .app-brand-link {
   cursor: pointer;
 }
 
-/* Launch list color override for unavailable feature */
+
 .launch-feature-unavailable {
   color: #888;
 }
 
 
-/* Export section spacing */
+
 .export-section {
   margin-bottom: 25px;
 }
 
-/* Final export button base styles */
+
 .final-export-btn {
   width: 100%;
   padding: 15px;
@@ -3199,14 +3199,14 @@ body.app {
   cursor: pointer;
 }
 
-/* Panel loading/placeholder text */
+
 .panel-loading-text {
   color: #bbb;
   font-size: 13px;
   padding: 16px;
 }
 
-/* Preset Overlay - Full Screen */
+
 .preset-overlay {
   position: fixed;
   top: 0;
@@ -3226,7 +3226,7 @@ body.app {
   display: none;
 }
 
-/* Preset Panel */
+
 .preset-panel {
   background: #1a1a1a;
   border-radius: 16px;
@@ -3237,7 +3237,7 @@ body.app {
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
-/* Close Button */
+
 .preset-close {
   position: absolute;
   top: 20px;
@@ -3263,7 +3263,7 @@ body.app {
   color: #fff;
 }
 
-/* Header */
+
 .preset-header {
   text-align: center;
   margin-bottom: 40px;
@@ -3282,13 +3282,13 @@ body.app {
   margin: 0;
 }
 
-/* Carousel Container */
+
 .preset-carousel-container {
   position: relative;
   margin-bottom: 30px;
 }
 
-/* Carousel */
+
 .preset-carousel {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -3297,7 +3297,7 @@ body.app {
   min-height: 400px;
 }
 
-/* Preset Card - Matches existing card style */
+
 .preset-card {
   background: #222;
   border-radius: 12px;
@@ -3352,7 +3352,7 @@ body.app {
   font-size: 14px;
 }
 
-/* Premium Badge */
+
 .preset-premium-badge {
   position: absolute;
   top: 8px;
@@ -3367,7 +3367,7 @@ body.app {
   z-index: 1;
 }
 
-/* Preset Info */
+
 .preset-info {
   flex: 1;
   display: flex;
@@ -3410,7 +3410,7 @@ body.app {
   color: #aaa;
 }
 
-/* Navigation Arrows */
+
 .preset-arrow {
   position: absolute;
   top: 50%;
@@ -3448,7 +3448,7 @@ body.app {
   right: 0;
 }
 
-/* Page Indicators */
+
 .preset-indicators {
   display: flex;
   justify-content: center;
@@ -3475,7 +3475,7 @@ body.app {
   background: #666;
 }
 
-/* Actions */
+
 .preset-actions {
   text-align: center;
   margin-bottom: 20px;
@@ -3498,7 +3498,7 @@ body.app {
   box-shadow: 0 6px 20px rgba(108, 99, 255, 0.4);
 }
 
-/* Footer */
+
 .preset-footer {
   text-align: center;
 }
@@ -3524,7 +3524,7 @@ body.app {
   color: #fff;
 }
 
-/* Loading State */
+
 .preset-loading {
   grid-column: 1 / -1;
   text-align: center;
@@ -3533,7 +3533,7 @@ body.app {
   font-size: 16px;
 }
 
-/* Empty State */
+
 .preset-empty {
   grid-column: 1 / -1;
   text-align: center;
@@ -3546,12 +3546,12 @@ body.app {
   font-size: 14px;
 }
 
-/* Preset Button in Top Panel */
+
 .preset-top-btn {
-  /* Inherits from .top-btn - no extra styles needed */
+
 }
 
-/* Responsive */
+
 @media (max-width: 1200px) {
   .preset-carousel {
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -3598,7 +3598,7 @@ body.app {
   }
 }
 
-/* Animation for card entrance */
+
 @keyframes preset-fade-in {
   from {
     opacity: 0;
@@ -3614,7 +3614,7 @@ body.app {
   animation: preset-fade-in 0.3s ease-out;
 }
 
-/* Scrollbar styling */
+
 .preset-overlay::-webkit-scrollbar {
   width: 10px;
 }

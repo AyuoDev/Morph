@@ -1,8 +1,8 @@
-// js/PresetSystem.js
-// ============================================================================
-// PRESET SYSTEM - Complete character preset management
-// Handles saving, loading, and managing character presets
-// ============================================================================
+
+
+
+
+
 
 import * as THREE from "three";
 
@@ -12,50 +12,50 @@ export class PresetSystem {
     this.officialPresets = [];
     this.userPresets = [];
     this.currentPreset = null;
-    
-    // UI References (set after DOM loads)
+
+
     this.modalOverlay = null;
     this.presetGrid = null;
-    this.currentTab = 'official'; // 'official', 'user', 'community', 'scratch'
+    this.currentTab = 'official';
   }
 
-  /* ========================================================================
-     INITIALIZATION
-     ======================================================================== */
+
+
+
 
   initUI() {
     this.modalOverlay = document.getElementById('preset-modal-overlay');
     this.presetGrid = document.getElementById('preset-grid');
-    
+
     this.attachEventListeners();
   }
 
   attachEventListeners() {
-    // Close button
+
     document.getElementById('preset-close-btn')?.addEventListener('click', () => {
       this.hideModal();
     });
 
-    // Click outside to close
+
     this.modalOverlay?.addEventListener('click', (e) => {
       if (e.target === this.modalOverlay) {
         this.hideModal();
       }
     });
 
-    // Tab switching
+
     document.querySelectorAll('.preset-tab').forEach(tab => {
       tab.addEventListener('click', () => {
         this.switchTab(tab.dataset.tab);
       });
     });
 
-    // Category filter
+
     document.getElementById('preset-category-filter')?.addEventListener('change', (e) => {
       this.filterByCategory(e.target.value);
     });
 
-    // Search
+
     let searchTimeout;
     document.getElementById('preset-search-input')?.addEventListener('input', (e) => {
       clearTimeout(searchTimeout);
@@ -64,13 +64,13 @@ export class PresetSystem {
       }, 300);
     });
 
-    // Start from scratch
+
     document.getElementById('start-scratch-btn')?.addEventListener('click', () => {
       window.dispatchEvent(new CustomEvent('preset-start-scratch'));
       this.hideModal();
     });
 
-    // Save buttons
+
     document.getElementById('save-preset-btn')?.addEventListener('click', () => {
       this.openSaveDialog();
     });
@@ -80,9 +80,9 @@ export class PresetSystem {
     });
   }
 
-  /* ========================================================================
-     CAPTURE STATE - Get complete character configuration
-     ======================================================================== */
+
+
+
 
   captureState(appState) {
     const {
@@ -111,16 +111,16 @@ export class PresetSystem {
       materials: {}
     };
 
-// Capture equipped clothing
+
     Object.entries(equippedClothes).forEach(([category, itemId]) => {
       if (itemId && loadedClothingMeshes[itemId]) {
         const clothingData = loadedClothingMeshes[itemId];
-        // The actual clothing item is stored in clothingData.clothing
+
         const clothingItem = clothingData.clothing || clothingData;
-        
+
         config.clothing[category] = {
           id: itemId,
-          r2Key: clothingItem.r2Key,  // Now gets the correct r2Key
+          r2Key: clothingItem.r2Key,
           name: clothingItem.name,
           category: category
         };
@@ -129,9 +129,9 @@ export class PresetSystem {
       }
     });
 
-    // Capture textures, colors, and materials from materialTargets
+
     Object.entries(materialTargets).forEach(([key, target]) => {
-      // Texture
+
       if (target.materialState?.texture) {
         const tex = target.materialState.texture;
         config.textures[key] = {
@@ -142,12 +142,12 @@ export class PresetSystem {
         };
       }
 
-      // Color
+
       if (target.materialState?.color) {
         config.colors[key] = `#${target.materialState.color.getHexString()}`;
       }
 
-      // Material properties
+
       if (target.meshes?.[0]?.material) {
         const mat = Array.isArray(target.meshes[0].material)
           ? target.meshes[0].material[0]
@@ -163,9 +163,9 @@ export class PresetSystem {
     return config;
   }
 
-  /* ========================================================================
-     SAVE PRESETS
-     ======================================================================== */
+
+
+
 
   async saveAsUserPreset(config, metadata) {
     try {
@@ -267,9 +267,9 @@ export class PresetSystem {
     }
   }
 
-  /* ========================================================================
-     LOAD PRESETS
-     ======================================================================== */
+
+
+
 
   async loadOfficialPresets(filters = {}) {
     try {
@@ -340,21 +340,21 @@ export class PresetSystem {
     }
   }
 
-  /* ========================================================================
-     APPLY PRESET
-     ======================================================================== */
+
+
+
 
   async applyPreset(preset, loadFunctions) {
     try {
       this.currentPreset = preset;
       const config = preset.config;
 
-      // Increment popularity for official presets
+
       if (preset.id && !preset.user_id) {
         this.supabase.rpc('increment_preset_popularity', { preset_id: preset.id }).then();
       }
 
-      // Parse and return loading instructions
+
       const instructions = {
         baseMesh: config.baseMesh,
         blendShapes: config.blendShapes || {},
@@ -364,7 +364,7 @@ export class PresetSystem {
         materials: config.materials || {}
       };
 
-      // Parse clothing
+
       Object.entries(config.clothing || {}).forEach(([category, item]) => {
         if (item) {
           instructions.clothing.push({
@@ -376,7 +376,7 @@ export class PresetSystem {
         }
       });
 
-      // Parse textures
+
       Object.entries(config.textures || {}).forEach(([materialKey, texture]) => {
         if (texture) {
           instructions.textures.push({
@@ -397,16 +397,16 @@ export class PresetSystem {
     }
   }
 
-  /* ========================================================================
-     UI MANAGEMENT
-     ======================================================================== */
+
+
+
 
   showModal() {
     if (!this.modalOverlay) return;
     this.modalOverlay.style.display = 'flex';
     document.body.style.overflow = 'hidden';
-    
-    // Load presets for current tab
+
+
     if (this.currentTab !== 'scratch') {
       this.loadPresetsForCurrentTab();
     }
@@ -421,12 +421,12 @@ export class PresetSystem {
   switchTab(tab) {
     this.currentTab = tab;
 
-    // Update tab buttons
+
     document.querySelectorAll('.preset-tab').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.tab === tab);
     });
 
-    // Show/hide UI sections
+
     const filters = document.getElementById('preset-filters');
     const footer = document.getElementById('preset-footer');
     const grid = document.getElementById('preset-grid-container');
@@ -492,7 +492,7 @@ export class PresetSystem {
     const card = document.createElement('div');
     card.className = 'preset-card';
 
-    // Thumbnail
+
     const thumbnail = document.createElement('div');
     thumbnail.className = 'preset-thumbnail';
     if (preset.thumbnail) {
@@ -501,7 +501,7 @@ export class PresetSystem {
       thumbnail.innerHTML = '<div class="preset-no-image">No Preview</div>';
     }
 
-    // Premium badge
+
     if (preset.is_premium) {
       const badge = document.createElement('div');
       badge.className = 'preset-premium-badge';
@@ -509,7 +509,7 @@ export class PresetSystem {
       thumbnail.appendChild(badge);
     }
 
-    // Info
+
     const info = document.createElement('div');
     info.className = 'preset-info';
 
@@ -525,7 +525,7 @@ export class PresetSystem {
       info.appendChild(desc);
     }
 
-    // Tags
+
     if (preset.tags && preset.tags.length > 0) {
       const tags = document.createElement('div');
       tags.className = 'preset-tags';
@@ -538,7 +538,7 @@ export class PresetSystem {
       info.appendChild(tags);
     }
 
-    // Actions
+
     const actions = document.createElement('div');
     actions.className = 'preset-actions';
 
@@ -551,7 +551,7 @@ export class PresetSystem {
     };
     actions.appendChild(loadBtn);
 
-    // Delete button for user presets
+
     if (this.currentTab === 'user') {
       const deleteBtn = document.createElement('button');
       deleteBtn.className = 'preset-btn-delete';
@@ -597,9 +597,9 @@ export class PresetSystem {
     });
   }
 
-  /* ========================================================================
-     SAVE DIALOGS
-     ======================================================================== */
+
+
+
 
   openSaveDialog() {
     const name = prompt("Enter preset name:");
@@ -626,9 +626,9 @@ export class PresetSystem {
     }));
   }
 
-  /* ========================================================================
-     UTILITY
-     ======================================================================== */
+
+
+
 
   validateConfig(config) {
     if (!config.baseMesh) {

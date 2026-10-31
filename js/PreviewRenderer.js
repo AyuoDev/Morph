@@ -45,7 +45,7 @@ export function createPreview({
 
   const loader = new GLTFLoader();
 
-  // Silent error — a broken thumbnail must NEVER throw to console as an uncaught error
+
   const silentErr = (label) => () =>
     console.warn("Preview thumbnail skipped:", label);
 

@@ -1,16 +1,16 @@
-// js/PresetOverlay.js
-// ============================================================================
-// PRESET OVERLAY SYSTEM
-// Startup overlay with preset carousel and "Preset" button in top panel
-// ============================================================================
+
+
+
+
+
 
 import { createPreview } from "./PreviewRenderer.js";
 import * as THREE from "three";
 
 export class PresetOverlay {
- constructor({ 
-    supabase, 
-    onLoadPreset, 
+ constructor({
+    supabase,
+    onLoadPreset,
     onStartScratch,
     WORKER_URL,
     getAssetUrl,
@@ -20,18 +20,18 @@ export class PresetOverlay {
     this.supabase = supabase;
     this.onLoadPreset = onLoadPreset;
     this.onStartScratch = onStartScratch;
-    
-    // For 3D preview rendering
+
+
     this.WORKER_URL = WORKER_URL;
     this.getAssetUrl = getAssetUrl;
     this.THREE = THREE;
     this.GLTFLoader = GLTFLoader;
-    
+
     this.presets = [];
     this.currentPage = 0;
     this.presetsPerPage = 8;
     this.activePreviews = new Map();
-    
+
     this.overlay = null;
     this.carousel = null;
     this.leftArrow = null;
@@ -39,9 +39,9 @@ export class PresetOverlay {
     this.indicators = null;
   }
 
-  /* ========================================================================
-     INITIALIZATION
-     ======================================================================== */
+
+
+
 
   async init() {
     this.overlay = document.getElementById('preset-overlay');
@@ -49,13 +49,13 @@ export class PresetOverlay {
     this.leftArrow = document.getElementById('preset-arrow-left');
     this.rightArrow = document.getElementById('preset-arrow-right');
     this.indicators = document.getElementById('preset-indicators');
-    
+
     this.attachEventListeners();
-    
-    // Load official presets
+
+
     await this.loadPresets();
-    
-    // Check if should show on startup
+
+
     const dontShow = localStorage.getItem('preset-dont-show');
     if (!dontShow) {
       this.show();
@@ -65,12 +65,12 @@ export class PresetOverlay {
   }
 
   attachEventListeners() {
-    // Close button
+
     document.getElementById('close-preset-overlay')?.addEventListener('click', () => {
       this.hide();
     });
 
-    // Navigation arrows
+
     this.leftArrow?.addEventListener('click', () => {
       this.previousPage();
     });
@@ -79,7 +79,7 @@ export class PresetOverlay {
       this.nextPage();
     });
 
-    // Start from scratch
+
     document.getElementById('preset-scratch-btn')?.addEventListener('click', () => {
       this.hide();
       if (this.onStartScratch) {
@@ -87,25 +87,25 @@ export class PresetOverlay {
       }
     });
 
-    // Don't show again checkbox
+
     document.getElementById('preset-dont-show')?.addEventListener('change', (e) => {
       if (e.target.checked) {
         localStorage.setItem('preset-dont-show', 'true');
-        // Show close button since they can now reopen via Preset button
+
         document.getElementById('close-preset-overlay').style.display = 'block';
       } else {
         localStorage.removeItem('preset-dont-show');
       }
     });
 
-    // Preset button in top panel
+
     document.getElementById('preset-top-btn')?.addEventListener('click', () => {
       this.show();
-      // Show close button when opened manually
+
       document.getElementById('close-preset-overlay').style.display = 'block';
     });
 
-    // Click outside to close (when opened manually)
+
     this.overlay?.addEventListener('click', (e) => {
       if (e.target === this.overlay && document.getElementById('preset-dont-show')?.checked) {
         this.hide();
@@ -113,9 +113,9 @@ export class PresetOverlay {
     });
   }
 
-  /* ========================================================================
-     LOAD PRESETS
-     ======================================================================== */
+
+
+
 
   async loadPresets() {
     try {
@@ -139,14 +139,14 @@ export class PresetOverlay {
     }
   }
 
-  /* ========================================================================
-     RENDER PRESETS
-     ======================================================================== */
+
+
+
 
   renderCurrentPage() {
     if (!this.carousel) return;
 
-    // Cleanup old previews
+
     this.cleanupPreviews();
 
     if (!this.presets || this.presets.length === 0) {
@@ -154,15 +154,15 @@ export class PresetOverlay {
       return;
     }
 
-    // Calculate which presets to show
+
     const start = this.currentPage * this.presetsPerPage;
     const end = start + this.presetsPerPage;
     const pagePresets = this.presets.slice(start, end);
 
-    // Clear carousel
+
     this.carousel.innerHTML = '';
 
-    // Render preset cards
+
     pagePresets.forEach(preset => {
       const card = this.createPresetCard(preset);
       this.carousel.appendChild(card);
@@ -174,15 +174,15 @@ export class PresetOverlay {
     card.className = 'preset-card';
     card.dataset.presetId = preset.id;
 
-    // Thumbnail with Three.js preview
+
     const thumbnail = document.createElement('div');
     thumbnail.className = 'preset-thumbnail';
 
-    // Try to create preview from preset config
+
     if (preset.config?.baseMesh) {
       this.createPresetPreview(thumbnail, preset);
     } else if (preset.thumbnail) {
-      // Fallback to static image
+
       const img = document.createElement('img');
       img.src = preset.thumbnail;
       img.alt = preset.name;
@@ -191,7 +191,7 @@ export class PresetOverlay {
       thumbnail.innerHTML = '<div class="preset-no-preview">No Preview</div>';
     }
 
-    // Premium badge
+
     if (preset.is_premium) {
       const badge = document.createElement('div');
       badge.className = 'preset-premium-badge';
@@ -199,7 +199,7 @@ export class PresetOverlay {
       thumbnail.appendChild(badge);
     }
 
-    // Info
+
     const info = document.createElement('div');
     info.className = 'preset-info';
 
@@ -215,7 +215,7 @@ export class PresetOverlay {
       info.appendChild(desc);
     }
 
-    // Tags
+
     if (preset.tags && preset.tags.length > 0) {
       const tags = document.createElement('div');
       tags.className = 'preset-tags';
@@ -231,7 +231,7 @@ export class PresetOverlay {
     card.appendChild(thumbnail);
     card.appendChild(info);
 
-    // Click to load preset
+
     card.addEventListener('click', () => {
       this.selectPreset(preset);
     });
@@ -240,12 +240,12 @@ export class PresetOverlay {
   }
 
 createPresetPreview(container, preset) {
-    // Create simple preview placeholder with gradients
+
     const previewContainer = document.createElement('div');
     previewContainer.className = 'preview-canvas';
     container.appendChild(previewContainer);
 
-    // Category-based gradients
+
     const categoryGradients = {
       'casual': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       'sports': 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
@@ -295,9 +295,9 @@ createPresetPreview(container, preset) {
     `;
   }
 
-  /* ========================================================================
-     PAGINATION
-     ======================================================================== */
+
+
+
 
   previousPage() {
     if (this.currentPage > 0) {
@@ -321,14 +321,14 @@ createPresetPreview(container, preset) {
   updateArrows() {
     const totalPages = Math.ceil(this.presets.length / this.presetsPerPage);
 
-    // Left arrow
+
     if (this.currentPage === 0) {
       this.leftArrow?.setAttribute('disabled', 'true');
     } else {
       this.leftArrow?.removeAttribute('disabled');
     }
 
-    // Right arrow
+
     if (this.currentPage >= totalPages - 1 || totalPages <= 1) {
       this.rightArrow?.setAttribute('disabled', 'true');
     } else {
@@ -341,7 +341,7 @@ createPresetPreview(container, preset) {
 
     const totalPages = Math.ceil(this.presets.length / this.presetsPerPage);
 
-    // Only show indicators if more than 1 page
+
     if (totalPages <= 1) {
       this.indicators.innerHTML = '';
       return;
@@ -365,18 +365,18 @@ createPresetPreview(container, preset) {
     }
   }
 
-  /* ========================================================================
-     ACTIONS
-     ======================================================================== */
+
+
+
 
   selectPreset(preset) {
-    // Mark as selected
+
     document.querySelectorAll('.preset-card').forEach(card => {
       card.classList.remove('active');
     });
     document.querySelector(`[data-preset-id="${preset.id}"]`)?.classList.add('active');
 
-    // Load preset with small delay for visual feedback
+
     setTimeout(() => {
       this.hide();
       if (this.onLoadPreset) {
@@ -385,16 +385,16 @@ createPresetPreview(container, preset) {
     }, 200);
   }
 
-  /* ========================================================================
-     SHOW/HIDE
-     ======================================================================== */
+
+
+
 
   show() {
     if (this.overlay) {
       this.overlay.classList.remove('hidden');
       document.body.style.overflow = 'hidden';
-      
-      // Reload presets to ensure fresh data
+
+
       this.loadPresets();
     }
   }
@@ -403,15 +403,15 @@ createPresetPreview(container, preset) {
     if (this.overlay) {
       this.overlay.classList.add('hidden');
       document.body.style.overflow = '';
-      
-      // Cleanup previews
+
+
       this.cleanupPreviews();
     }
   }
 
-  /* ========================================================================
-     CLEANUP
-     ======================================================================== */
+
+
+
 
   cleanupPreviews() {
     this.activePreviews.forEach((preview, container) => {

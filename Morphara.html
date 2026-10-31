@@ -12,12 +12,14 @@
         defaults: '2026-01-30'
     })
 </script>
-<!-- Modern browsers -->
+
 <link rel="icon" type="image/png" sizes="32x32" href="images/morphara_icon.png">
   <link rel="canonical" href="https://morphara.com/Morphara">
-<!-- Mobile / PWA -->
+
 <link rel="apple-touch-icon" href="images/morphara_icon.png">
   <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/editor.css">
+<script src="js/editor-ui.js" defer></script>
 
   <script type="importmap">
   {
@@ -28,8 +30,8 @@
   </script>
 </head>
 
-<body class="app">
- <!-- ================= AUTH OVERLAY ================= -->
+<body class="app" data-mode="base">
+
 <div id="auth-overlay" class="overlay hidden">
 
   <div class="overlay-backdrop"></div>
@@ -51,19 +53,19 @@
       <input type="email" id="auth-email" placeholder="Email" />
       <input type="password" id="auth-password" placeholder="Password" />
 
-      <!-- Checkboxes for signup only -->
+
       <div id="signup-checkboxes" style="margin: 15px 0; text-align: left; font-size: 14px; display: none;">
         <label style="display: flex; align-items: flex-start; margin-bottom: 10px; cursor: pointer;">
           <input type="checkbox" id="newsletter-checkbox" style="margin-right: 8px; margin-top: 3px; cursor: pointer;">
           <span style="color: rgba(255,255,255,0.9);">Send me updates about new features and content (optional)</span>
         </label>
-        
+
         <label style="display: flex; align-items: flex-start; cursor: pointer;">
           <input type="checkbox" id="terms-checkbox" required style="margin-right: 8px; margin-top: 3px; cursor: pointer;">
           <span style="color: rgba(255,255,255,0.9);">
-            By signing up, you agree to our 
-            <a href="terms.html" target="_blank" style="color: #667eea; text-decoration: none;">Terms of Service</a> 
-            and 
+            By signing up, you agree to our
+            <a href="terms.html" target="_blank" style="color: #667eea; text-decoration: none;">Terms of Service</a>
+            and
             <a href="privacy.html" target="_blank" style="color: #667eea; text-decoration: none;">Privacy Policy</a>
           </span>
         </label>
@@ -88,36 +90,36 @@
 </div>
 
 
-<!-- ================= LAUNCH OVERLAY ================= -->
+
 <div id="preset-overlay" class="preset-overlay">
   <div class="preset-panel">
-    
-    <!-- Close Button (X) - Only show after first visit -->
+
+
     <button id="close-preset-overlay" class="preset-close" style="display:none;">✕</button>
 
-    <!-- Header -->
+
     <div class="preset-header">
       <h1>Choose Your Character</h1>
       <p>Select a preset to start customizing, or build from scratch</p>
     </div>
 
-    <!-- Carousel Container -->
+
     <div class="preset-carousel-container">
-      
-      <!-- Left Arrow -->
+
+
       <button class="preset-arrow preset-arrow-left" id="preset-arrow-left" disabled>
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M15 18l-6-6 6-6"/>
         </svg>
       </button>
 
-      <!-- Preset Cards Grid -->
+
       <div class="preset-carousel" id="preset-carousel">
-        <!-- Cards dynamically loaded here -->
+
         <div class="preset-loading">Loading presets...</div>
       </div>
 
-      <!-- Right Arrow -->
+
       <button class="preset-arrow preset-arrow-right" id="preset-arrow-right">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M9 18l6-6-6-6"/>
@@ -125,19 +127,19 @@
       </button>
     </div>
 
-    <!-- Page Indicators -->
+
     <div class="preset-indicators" id="preset-indicators">
-      <!-- Dots dynamically added here -->
+
     </div>
 
-    <!-- Bottom Actions -->
+
     <div class="preset-actions">
       <button class="preset-scratch-btn" id="preset-scratch-btn">
         Start from Scratch
       </button>
     </div>
 
-    <!-- Don't Show Again (after first visit) -->
+
     <div class="preset-footer">
       <label class="preset-checkbox">
         <input type="checkbox" id="preset-dont-show">
@@ -148,29 +150,29 @@
   </div>
 </div>
 
-  <!-- ================= TOP BAR ================= -->
+
 <div id="top-panel">
 
-  <!-- LEFT -->
+
   <div class="top-section top-left">
-    <div class="app-brand app-brand-link" onclick="window.location.href='index.html'">
-  <img src="images/morphara_icon.png" class="app-icon" />
+    <a class="app-brand app-brand-link" href="index.html" aria-label="Back to Ayuo Dev homepage">
+  <img src="images/morphara-project.png" alt="" class="app-icon" />
   <div class="app-title">
     Morphara
-    <span class="app-version">v0.1.2</span>
+    <span class="app-version">CHARACTER STUDIO</span>
   </div>
-</div>
+</a><span class="editor-top-caption">Your imagination, in three dimensions.</span>
 
-    <button class="top-btn active" data-mode="base">Base Meshes</button>
-    <button class="top-btn" data-mode="customize">Customize</button>
-    <button class="top-btn" data-mode="clothes">Appearance</button>
-    <button class="top-btn" data-mode="materials">Materials</button>
-    <button class="top-btn" data-mode="animations">Animations</button>
-    <button class="top-btn" data-mode="randomizer">Random</button>
-    <button class="top-btn" id="preset-top-btn">Presets</button>
+
+
+
+
+
+
+
   </div>
 
-  <!-- RIGHT -->
+
   <div class="top-section top-right top-actions">
     <button class="top-btn" id="export-btn">Export</button>
 
@@ -182,9 +184,9 @@
       👤
     </button>
 
-    <!-- DROPDOWNS -->
+
     <div id="credits-menu" class="top-dropdown hidden">
-      <button class="dropdown-item open-plans">MemberShips</button>
+      <button class="dropdown-item open-plans">Memberships</button>
       <button class="dropdown-item open-credits">Buy Credits</button>
     </div>
 
@@ -199,14 +201,20 @@
 </div>
 
 
-  <!-- ================= LEFT PANELS ================= -->
+<nav class="tool-rail" aria-label="Character tools"><button class="top-btn active" data-mode="base" aria-pressed="true"><span class="tool-symbol" aria-hidden="true">◇</span>Base Meshes</button>
+<button class="top-btn" data-mode="customize" aria-pressed="false"><span class="tool-symbol" aria-hidden="true">⌘</span>Customize</button>
+<button class="top-btn" data-mode="clothes" aria-pressed="false"><span class="tool-symbol" aria-hidden="true">♧</span>Appearance</button>
+<button class="top-btn" data-mode="materials" aria-pressed="false"><span class="tool-symbol" aria-hidden="true">◐</span>Materials</button>
+<button class="top-btn" data-mode="animations" aria-pressed="false"><span class="tool-symbol" aria-hidden="true">▷</span>Animations</button>
+<button class="top-btn" data-mode="randomizer" aria-pressed="false"><span class="tool-symbol" aria-hidden="true">⚄</span>Random</button><button class="top-btn" id="preset-top-btn"><span class="tool-symbol" aria-hidden="true">▦</span>Presets</button></nav><div class="library-header"><h1 id="library-title">Base meshes</h1><input id="library-search" type="search" placeholder="Search library…" aria-label="Search asset library"></div>
+
 
   <div id="basemesh-panel" class="panel basemesh-cards">
-    <p class="panel-loading-text">Base mesh selection coming soon.</p>
+    <p class="panel-loading-text">Loading your character library…</p>
   </div>
 
   <div id="blendshape-panel" class="panel">
-    <!-- Blend shapes are injected by JS -->
+
   </div>
 
 <div id="material-panel" class="panel">
@@ -226,7 +234,7 @@
     <div id="texture-grid"></div>
   </div>
 
-  <!-- NEW: Active Texture Selector -->
+
   <div class="material-section">
     <label class="section-title">Active Texture</label>
     <select id="active-texture-select" class="material-select">
@@ -237,7 +245,7 @@
     </button>
   </div>
 
-  <!-- NEW: Texture Resolution Selector -->
+
   <div class="material-section">
     <label class="section-title">Texture Resolution</label>
     <select id="texture-resolution-select" class="material-select">
@@ -250,10 +258,10 @@
     </p>
   </div>
 
-  <!-- NEW: Material Properties (Roughness & Metalness) -->
+
   <div class="material-section">
     <label class="section-title">Material Properties</label>
-    
+
     <div class="material-prop-row">
       <label class="material-prop-label">Roughness: <span id="roughness-value">0.5</span></label>
       <input type="range" id="roughness-slider" min="0" max="1" step="0.01" value="0.5" class="material-prop-range">
@@ -374,43 +382,43 @@
 </div>
 
 
-<!-- RIGHT CLOTHING ITEMS PANEL -->
+
 <div id="clothes-items-panel" class="panel panel-right">
   <h4 id="clothes-items-title">Select a category</h4>
 
-  <!-- IMPORTANT: this is what JS writes into -->
+
   <div class="clothes-items-grid" id="clothes-items-grid"></div>
 </div>
-  <!-- ================= MAIN SCRIPT ================= -->
-<div id="viewport"></div>
-<!-- ================= TEXTURE PAINTER MODE ================= -->
+
+<div id="viewport"><div class="viewport-toolbar"><span>CHARACTER WORKSPACE / PERSPECTIVE</span><div><button id="frame-character" type="button" title="Frame character (F)">⌖ Frame</button><button id="help-button" type="button">? Help</button></div></div><div class="stage-empty" id="stage-empty"><img src="images/morphara-project.png" alt=""><h2>It starts with a character.</h2><p>Choose a base mesh from the library, or explore presets to find your starting point.</p></div><div class="viewport-help">Drag to orbit · Scroll to zoom · Right-drag to pan</div></div><div class="editor-status"><span id="editor-status-text" role="status">Loading library…</span><a href="index.html">← Back to Ayuo Dev</a><span>GLB / GLTF available <strong>●</strong> · FBX offline</span></div><dialog id="editor-help"><h2>Make yourself at home.</h2><p><strong>1.</strong> Choose a base mesh or open Presets.<br><strong>2.</strong> Use the tool rail to shape, dress, paint, and animate.<br><strong>3.</strong> Sign in to export your character.</p><p>Drag to orbit · Scroll to zoom<br>Right-drag to pan · F to frame your character</p><p>GLB and GLTF exports are available. FBX conversion is temporarily disabled.</p><button type="button">Got it</button></dialog>
+
 
 <div id="texture-painter-mode" class="hidden">
 
-  <!-- LEFT: 3D MODEL (20%) -->
+
   <div id="painter-viewport">
-    <!-- we will reuse the SAME three.js renderer -->
+
   </div>
 
-  <!-- RIGHT: PAINTER UI (80%) -->
+
   <div id="painter-ui">
 
-    <!-- TOP BAR -->
+
     <div class="painter-top-bar">
       <button id="exit-painter">⬅ Back</button>
       <span class="painter-title">Texture Painter</span>
     </div>
 
-    <!-- MAIN CONTENT -->
+
     <div class="painter-content">
 
-      <!-- TEXTURE VIEW -->
+
       <div class="painter-panel texture-view">
         <h4>Texture View</h4>
         <canvas id="texture-canvas"></canvas>
       </div>
 
-      <!-- TOOLS -->
+
       <div class="painter-panel tools-panel">
         <h4>Tools</h4>
 
@@ -430,7 +438,7 @@
           <input type="range" id="brush-size" min="1" max="50" value="10">
 
         </div>
-  <!-- UV CONTROLS (NEW, SIMPLE) -->
+
   <div class="tool-subpanel uv-panel">
     <label>UV Overlay</label>
 
@@ -454,14 +462,14 @@
   </div>
 </div>
 
-<!-- ================= PLANS & CREDITS OVERLAY ================= -->
+
 <div id="plans-overlay" class="overlay hidden">
 
   <div class="overlay-backdrop"></div>
 
   <div class="overlay-panel">
 
-    <!-- HEADER -->
+
     <div class="overlay-header">
       <h2>MemberShips & Credits</h2>
       <button id="close-plans" class="icon-btn">✕</button>
@@ -482,16 +490,16 @@
 </div>
 
 
-    <!-- TABS -->
+
     <div class="overlay-tabs">
       <button class="tab-btn active" data-tab="plans">MemberShip</button>
       <button class="tab-btn" data-tab="credits">Buy Credits</button>
     </div>
 
-    <!-- CONTENT -->
+
     <div class="overlay-content">
 
-      <!-- ================= SUBSCRIPTIONS ================= -->
+
       <div class="tab-content active" id="tab-plans">
 <div class="billing-toggle">
   <span class="billing-label active" data-billing="monthly">Monthly</span>
@@ -505,7 +513,7 @@
 
         <div class="plans-grid">
 
-          <!-- FREE -->
+
           <div class="plan-card free">
             <h3>FREE</h3>
             <p class="price">$0</p>
@@ -520,7 +528,7 @@
             <button class="plan-btn disabled">Current Plan</button>
           </div>
 
-          <!-- PREMIUM -->
+
           <div class="plan-card premium highlight">
             <h3>PREMIUM</h3>
             <p class="price">
@@ -540,7 +548,7 @@
             <button class="plan-btn">Subscribe</button>
           </div>
 
-          <!-- STUDIO -->
+
           <div class="plan-card studio">
             <h3>STUDIO</h3>
             <p class="price"><span class="price-monthly">$29.99 / month</span>
@@ -549,7 +557,7 @@
 
             <ul>
               <li>50 Credits / month</li>
-              <li>✔ FBX Export (GLB/GLTF/FBX)</li>
+              <li>✔ GLB / GLTF export (FBX currently unavailable)</li>
               <li>Credits roll over (6 months)</li>
               <li>4096 textures</li>
               <li>Batch exports</li>
@@ -562,7 +570,7 @@
         </div>
       </div>
 
-      <!-- ================= CREDIT PACKS ================= -->
+
       <div class="tab-content" id="tab-credits">
 
         <div class="credits-grid">
@@ -598,7 +606,7 @@
 <script type="module" src="./main.js"></script>
 
 
-<!-- Randomizer Loading Overlay -->
+
 <div id="randomizer-loading" class="overlay hidden">
   <div class="randomizer-loading-content">
     <div class="spinner spinner-wrap"></div>
@@ -607,10 +615,10 @@
   </div>
 </div>
 
-<!-- Export Panel Overlay -->
+
 <div id="export-panel-overlay" class="overlay hidden">
   <div class="export-panel-content">
-    
+
     <button id="export-panel-close" class="export-panel-close-btn">&times;</button>
 
     <h2 class="export-panel-title">Export Your Character</h2>
@@ -621,9 +629,9 @@
 
     <div class="export-section">
       <h3 class="export-section-title">What do you want to export?</h3>
-      
+
       <div class="export-type-grid">
-        <div class="export-type-card" onclick="window.selectExportType('full')">
+        <div class="export-type-card" onclick="window.selectExportType('full', this)">
           <div class="export-type-icon">📦</div>
           <h4 class="export-type-name">Full Character</h4>
           <p class="export-type-desc">Model + Textures + Animations</p>
@@ -632,7 +640,7 @@
           </p>
         </div>
 
-        <div class="export-type-card" onclick="window.selectExportType('animation')">
+        <div class="export-type-card" onclick="window.selectExportType('animation', this)">
           <div class="export-type-icon">🎬</div>
           <h4 class="export-type-name">Animation Only</h4>
           <p class="export-type-desc">Skeleton + Animation data</p>
@@ -643,18 +651,16 @@
 
     <div class="export-section">
       <h3 class="export-section-title">Choose Format</h3>
-      
+
       <div class="export-format-grid">
-        <button class="format-btn" data-format="glb" onclick="window.selectFormat('glb', this)">>
+        <button class="format-btn" data-format="glb" onclick="window.selectFormat('glb', this)">
           GLB <span class="format-label-sub"></span>
         </button>
-        <button class="format-btn" data-format="gltf" onclick="window.selectFormat('gltf', this)">>
+        <button class="format-btn" data-format="gltf" onclick="window.selectFormat('gltf', this)">
           GLTF <span class="format-label-sub"></span>
         </button>
-        <button class="format-btn" data-format="fbx" onclick="window.selectFormat('fbx', this)">>
-          FBX <span class="format-label-sub"></span>
-        </button>
-    <p class="export-format-note">Note: FBX export requires Premium or Studio plan</p></div>
+        <button class="format-btn" data-format="fbx" disabled aria-disabled="true" title="FBX conversion is temporarily unavailable">FBX <span class="format-label-sub">Unavailable</span></button>
+    <p class="export-format-note">FBX conversion is temporarily disabled. Choose GLB or GLTF.</p></div>
     </div>
 
     <button id="final-export-btn" class="final-export-btn" disabled>
@@ -664,7 +670,7 @@
   </div>
 </div>
 
-<!-- ================= SETTINGS OVERLAY ================= -->
+
 <div id="settings-overlay">
   <div class="settings-panel">
 
@@ -675,21 +681,21 @@
 
     <div class="settings-body">
 
-      <!-- Account Info -->
+
       <div class="settings-section">
         <h3>Account Information</h3>
         <p><strong>Email:</strong> <span id="settings-email">-</span></p>
         <p><strong>Plan:</strong> <span id="settings-plan">-</span></p>
       </div>
 
-      <!-- Subscription -->
+
       <div class="settings-section">
         <h3>💳 Subscription</h3>
         <p>Cancel your subscription. You'll keep access until the end of your billing period.</p>
         <button id="cancel-subscription-btn" class="settings-btn-danger">Cancel Subscription</button>
       </div>
 
-      <!-- Delete Account -->
+
       <div class="settings-section">
         <h3>🗑️ Delete Account</h3>
         <p>Permanently disable your account. Your data will be retained for 30 days.</p>

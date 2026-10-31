@@ -23,17 +23,17 @@ import {
   redo
 } from "./js/TexturePainter.js";
 
-/* ---------------- WORKER & DATA CONFIG ---------------- */
+
 const WORKER_URL = "https://morphara.maroukayuob.workers.dev";
 
-// These are populated from Supabase on boot
+
 let BASE_MESHES = [];
 let CLOTHES     = [];
 let ANIMATIONS  = [];
 let TEXTURE_PRESETS = {};
 let TEXTURES = [];
 
-/* ---------------- GLOBAL STATE ---------------- */
+
 
 let scene, camera, renderer, controls;
 let loader;
@@ -54,28 +54,28 @@ let uvOverlayImage = null;
 let showUVOverlay = true;
 let uvOpacity = 0.25;
 
-// Presets Global
+
 let presetOverlay;
 let presetSystem;
 
-// Texture Painter V2 state (meshTextureData imported from TexturePainter.js)
+
 let currentPainterMesh = null;
 let currentTextureName = null;
 let maxAllowedResolution = 1024;
 let painterControls = null;
 
-// Brush cursor tracking
+
 let canvasMouseX = null;
 let canvasMouseY = null;
 
-const paintedTextures = {};  // Keep for backward compatibility
+const paintedTextures = {};
 const clock = new THREE.Clock();
 const blendShapeMap = {};
 const morphMeshes = [];
 const morphValues = {};
 
-// Track preview instances for cleanup
-const activePreviews = new Map(); // Map<containerId, preview>
+
+const activePreviews = new Map();
 let equippedClothes = {
   shirts: null,
   pants: null,
@@ -96,23 +96,23 @@ const randomizerConfig = {
   blendShapes: true,
   animation: true
 };
-  // Intitate Accounts
+
 const SUPABASE_URL = "https://yjrqcmzkmfawwsppmnkl.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_fIkpyaJmmkNhcB1HOeRrKw_xZ0c0miD";
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-/* ---------------- POSTHOG TRACKING ---------------- */
+
 let sessionStartTime = Date.now();
 
 let loadedClothingMeshes = {};
 
-/* ---------------- Auth State ------------*/
+
 
 async function checkSession() {
   const { data: { session } } = await supabase.auth.getSession();
-  
-  // Track app loaded
+
+
   if (window.posthog) {
     posthog.capture('app_loaded', {
       url: window.location.href,
@@ -122,9 +122,9 @@ async function checkSession() {
       screen_height: window.innerHeight
     });
   }
-  
+
   if (session) {
-    // Track authenticated session
+
     if (window.posthog) {
       posthog.identify(session.user.id, {
         email: session.user.email,
@@ -137,7 +137,7 @@ async function checkSession() {
     updateUserMenu(session);
     showToast("Welcome back 🎉");
   } else {
-    // Track guest session
+
     if (window.posthog) {
       posthog.capture('session_guest');
     }
@@ -146,7 +146,7 @@ async function checkSession() {
 
 checkSession();
 
-// Central function — handles BOTH logged-in and logged-out UI updates
+
 function updateUserMenu(session) {
   const menu = document.getElementById("user-menu");
   const userBtn = document.getElementById("user-btn");
@@ -155,11 +155,11 @@ function updateUserMenu(session) {
     const user = session.user;
     const initial = (user.email?.[0] ?? "U").toUpperCase();
 
-    // Update the 👤 button to show user initial
+
     userBtn.textContent = initial;
     userBtn.title = user.email;
 
-    // Rebuild menu with user info + settings + logout
+
     menu.innerHTML = `
       <span class="user-email">${user.email}</span>
       <button class="dropdown-item" id="settings-btn">⚙️ Settings</button>
@@ -173,10 +173,10 @@ function updateUserMenu(session) {
       document.getElementById("user-menu").classList.add("hidden");
       const so = document.getElementById("settings-overlay");
       so.style.display = "flex";
-      // Populate email
+
       const emailEl = document.getElementById("settings-email");
       if (emailEl) emailEl.textContent = user.email;
-      // Populate plan
+
       fetch(WORKER_URL + "/check-plan", {
         headers: { "Authorization": "Bearer " + session.access_token }
       }).then(r => r.json()).then(data => {
@@ -194,14 +194,14 @@ function updateUserMenu(session) {
         });
       }
       await supabase.auth.signOut();
-      // onAuthStateChange will fire and call updateUserMenu(null)
+
     });
 
-    // Fetch or create credits
+
     ensureUserCredits(user);
 
   } else {
-    // Logged out state
+
     userBtn.textContent = "👤";
     userBtn.title = "";
 
@@ -210,7 +210,7 @@ function updateUserMenu(session) {
       <button class="dropdown-item" data-auth-open="login">Log In</button>
     `;
 
-    // Re-bind auth open buttons
+
     menu.querySelectorAll("[data-auth-open]").forEach(btn => {
       btn.addEventListener("click", () => {
         authMode = btn.dataset.authOpen;
@@ -224,9 +224,9 @@ function updateUserMenu(session) {
   }
 }
 
-// Fetches credits + subscription plan
+
 async function ensureUserCredits(user) {
-  // Fetch credits
+
   const { data, error } = await supabase
     .from("users")
     .select("credits")
@@ -239,20 +239,20 @@ async function ensureUserCredits(user) {
     document.getElementById("credits-count").textContent = data.credits;
   }
 
-  // Fetch active subscription
+
   await fetchAndDisplayPlan(user.id);
 }
 
-// Expose globally so Controls.js can call it after Stripe return
+
 window.fetchAndDisplayPlan = fetchAndDisplayPlan;
 
-// Fetches the user current plan and updates UI
+
 async function fetchAndDisplayPlan(userId) {
   let planName  = "free";
   let planLabel = "FREE";
 
   try {
-    // Use Worker /check-plan — reliable price ID matching via secrets
+
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
       const res  = await fetch(`${WORKER_URL}/check-plan`, {
@@ -266,10 +266,10 @@ async function fetchAndDisplayPlan(userId) {
     console.warn("fetchAndDisplayPlan failed:", e.message);
   }
 
-  // Store globally so Controls.js can read it
+
   window._currentPlan = planName;
 
-  // Update plan badge next to user button
+
   let badge = document.getElementById("plan-badge");
   if (!badge) {
     badge = document.createElement("span");
@@ -283,17 +283,17 @@ async function fetchAndDisplayPlan(userId) {
   badge.style.color      = "#fff";
 }
 
-// ============================================================================
-// BLEND SHAPE EXPORT LOCKING FUNCTIONS
-// Added for v0.1.2 - Free users get baked shapes, Premium/Studio get editable
-// ============================================================================
 
-// Get current user's subscription tier
+
+
+
+
+
 async function getUserSubscriptionTier() {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return 'free';
-    
+
     const res = await fetch(`${WORKER_URL}/check-plan`, {
       method: 'GET',
       headers: {
@@ -301,80 +301,80 @@ async function getUserSubscriptionTier() {
         'Content-Type': 'application/json'
       }
     });
-    
+
     if (!res.ok) return 'free';
-    
+
     const data = await res.json();
-    return data.plan || 'free'; // Returns: 'free', 'premium', or 'studio'
+    return data.plan || 'free';
   } catch (error) {
     console.error('Failed to get subscription tier:', error);
-    return 'free'; // Default to free on error
+    return 'free';
   }
 }
 
-// Check if user has access to blend shapes in export
+
 function hasBlendShapeExportAccess(tier) {
   return ['premium', 'studio', 'admin'].includes(tier);
 }
 
-// Bake blend shapes into the mesh (for free users)
+
 function bakeBlendShapesIntoMesh(model) {
   console.log('🔒 Baking blend shapes into mesh for free tier export');
-  
+
   const bakedModel = model.clone(true);
-  
+
   bakedModel.traverse(obj => {
     if (obj.isSkinnedMesh || obj.isMesh) {
-      // Apply current morph target influences to geometry
+
       if (obj.morphTargetInfluences && obj.morphTargetInfluences.length > 0) {
         const geometry = obj.geometry;
-        
-        // Get position attribute
+
+
         const position = geometry.attributes.position;
         const morphPosition = geometry.morphAttributes.position;
-        
+
         if (morphPosition && morphPosition.length > 0) {
-          // Clone the base positions
+
           const positions = position.array.slice();
-          
+
           console.log(`  Baking ${obj.morphTargetInfluences.length} blend shapes for ${obj.name}`);
-          
-          // Apply each morph target based on its influence
+
+
           for (let i = 0; i < obj.morphTargetInfluences.length; i++) {
             const influence = obj.morphTargetInfluences[i];
-            if (influence === 0) continue; // Skip if no influence
-            
+            if (influence === 0) continue;
+
             const morphData = morphPosition[i];
             if (!morphData) continue;
-            
-            // Add the morph displacement weighted by influence
+
+
             for (let j = 0; j < positions.length; j++) {
               positions[j] += morphData.array[j] * influence;
             }
           }
-          
-          // Update geometry with baked positions
+
+
           geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
           geometry.attributes.position.needsUpdate = true;
-          
-          // Recalculate normals after position change
+
+
           geometry.computeVertexNormals();
-          
-          // Remove morph targets and influences
+
+
           delete geometry.morphAttributes;
           obj.morphTargetInfluences = null;
           obj.morphTargetDictionary = null;
-          
+
           console.log(`  ✓ Blend shapes baked into ${obj.name}`);
         }
       }
     }
   });
-  
+
   console.log('✓ All blend shapes baked into mesh');
   return bakedModel;
 
-  // Reset all plan cards first
+
   document.querySelectorAll(".plan-card").forEach(card => {
     card.classList.remove("active-plan");
     const btn = card.querySelector(".plan-btn");
@@ -385,14 +385,14 @@ function bakeBlendShapesIntoMesh(model) {
     }
   });
 
-  // Free card always says "Current Plan" only if actually on free
+
   const freeBtn = document.querySelector(".plan-card.free .plan-btn");
   if (freeBtn) {
     freeBtn.textContent = planName === "free" ? "Current Plan" : "Free";
-    freeBtn.disabled    = true; // free is always disabled (cant subscribe to free)
+    freeBtn.disabled    = true;
   }
 
-  // Mark the actual active paid plan card
+
   if (planName !== "free") {
     const activeCard = document.querySelector(`.plan-card.${planName}`);
     if (activeCard) {
@@ -407,7 +407,7 @@ function bakeBlendShapesIntoMesh(model) {
   }
 }
 
-/* ---------------- ASSET DATA LAYER ---------------- */
+
 async function getAssetUrl(bucket, filename, mode = "public") {
   let res;
 
@@ -445,7 +445,7 @@ async function loadAllAssets() {
 
     if (error) throw error;
 
-    // ── Base Meshes ──
+
     BASE_MESHES = assets
       .filter(a => a.type === "basemesh")
       .map(a => ({
@@ -453,46 +453,46 @@ async function loadAllAssets() {
         name:          a.name,
         r2Key:         a.r2_key,
         priceCredits:  a.price_credits ?? 1,
-        uv_map:        a.uv_map,  // UV map filename for texture painter
-        // path is resolved async via getAssetUrl — stored per-use
+        uv_map:        a.uv_map,
+
       }));
 
-    // ── Clothing (all non-basemesh, non-texture, non-animation, non-uvmap) ──
+
     const clothingTypes = ["shirts","pants","shoes","gloves","hair",
                            "accessories","headwear","glasses","facialHair","jacket"];
     CLOTHES = assets
       .filter(a => clothingTypes.includes(a.type))
       .map(a => {
-        // Assign material domain based on category
-        let materialDomain = "fabric"; // default
-        
+
+        let materialDomain = "fabric";
+
         if (a.type === "hair" || a.type === "facialHair") {
           materialDomain = "hair";
         } else if (a.type === "glasses") {
           materialDomain = "glass";
         } else if (a.type === "accessories") {
-          // Accessories can be metal, leather, or fabric
-          materialDomain = "metal"; // Default to metal, can be overridden per-item
+
+          materialDomain = "metal";
         } else if (a.type === "shoes") {
-          materialDomain = "leather"; // Shoes typically leather
+          materialDomain = "leather";
         } else {
-          // shirts, pants, gloves, jacket, headwear = fabric
+
           materialDomain = "fabric";
         }
-        
+
         return {
           id:             a.id,
           name:           a.name,
-          category:       a.type,       // type = bucket = category
+          category:       a.type,
           baseMesh:       a.compatible_mesh,
           r2Key:          a.r2_key,
           materialDomain: materialDomain,
           priceCredits:   a.price_credits ?? 0,
-          uv_map:         a.uv_map       // UV map filename for texture painter
+          uv_map:         a.uv_map
         };
       });
 
-    // ── Animations ──
+
     ANIMATIONS = assets
       .filter(a => a.type === "animation")
       .map(a => ({
@@ -503,58 +503,61 @@ async function loadAllAssets() {
         loop:     true
       }));
 
-    // ── Textures → fetched from dedicated textures table, grouped by domain ──
+
     const { data: textureAssets, error: textureError } = await supabase
       .from("textures")
       .select("*")
       .order("name");
-    
+
     if (textureError) {
       console.error("Failed to load textures:", textureError);
     } else {
       TEXTURE_PRESETS = {};
       TEXTURES = textureAssets || [];
       for (const t of textureAssets) {
-        const domain = t.material_domain || "fabric"; // Use material_domain from textures table
+        const domain = t.material_domain || "fabric";
         if (!TEXTURE_PRESETS[domain]) TEXTURE_PRESETS[domain] = [];
-        
+
         TEXTURE_PRESETS[domain].push({
           id:              t.id,
           label:           t.name,
-          r2Key:           t.r2_key,           // Diffuse/Albedo
-          r2KeyNormal:     t.r2_key_normal,    // Normal map
-          r2KeyMetallic:   t.r2_key_metallic,  // Metallic map
-          r2KeyRoughness:  t.r2_key_roughness, // Roughness map
-          r2KeyAO:         t.r2_key_ao,        // Ambient Occlusion
-          compatibleMesh:  t.compatible_mesh,  // "realistic_human", "midpoly_male", "all"
-          isPremium:       t.is_premium,       // Premium texture flag
-          map:             null // loaded on demand via getAssetUrl
+          r2Key:           t.r2_key,
+          r2KeyNormal:     t.r2_key_normal,
+          r2KeyMetallic:   t.r2_key_metallic,
+          r2KeyRoughness:  t.r2_key_roughness,
+          r2KeyAO:         t.r2_key_ao,
+          compatibleMesh:  t.compatible_mesh,
+          isPremium:       t.is_premium,
+          map:             null
         });
       }
     }
 
-    // Build the UI now that data is ready
+
     buildBaseMeshUI();
+    document.getElementById("editor-status-text").textContent = BASE_MESHES.length + " base meshes · Choose one to begin";
 
   } catch (err) {
     console.error("Failed to load assets:", err);
-    panel.innerHTML = "<p style='color:#e55;font-size:13px;padding:16px'>Failed to load assets. Please refresh.</p>";
+    panel.innerHTML = '<p class="studio-error">The asset library could not load. Check your connection and try again.</p><button id="retry-library" type="button">Retry loading</button>';
+    panel.querySelector('#retry-library').addEventListener('click', loadAllAssets);
+    document.getElementById('editor-status-text').textContent = 'Library unavailable · Retry in the library panel';
   }
 }
 
-// Presets Logics
-// ============ PRESET SYSTEM ============
+
+
 async function initPresetSystem() {
   presetSystem = new PresetSystem({ supabase });
-  
+
   presetOverlay = new PresetOverlay({
     supabase,
-    // Pass these for 3D preview rendering
+
     WORKER_URL: WORKER_URL,
     getAssetUrl: getAssetUrl,
     THREE: THREE,
     GLTFLoader: GLTFLoader,
-    // Callbacks
+
     onLoadPreset: async (preset) => {
       await loadPresetCharacter(preset);
     },
@@ -562,18 +565,18 @@ async function initPresetSystem() {
       console.log("Starting from scratch");
     }
   });
-  
+
   await presetOverlay.init();
 }
 async function loadPresetCharacter(preset) {
   try {
     showToast("Loading preset...");
-    
+
     const config = preset.config;
     console.log("=== LOADING PRESET ===");
     console.log("Config:", config);
-    
-    // 1. Load base mesh
+
+
     if (config.baseMesh) {
       const mesh = BASE_MESHES.find(m => m.r2Key === config.baseMesh.r2Key);
       if (mesh) {
@@ -581,13 +584,13 @@ async function loadPresetCharacter(preset) {
         await new Promise(r => setTimeout(r, 1000));
       }
     }
-    
-    // 2. Apply blend shapes
+
+
     if (config.blendShapes) {
       Object.entries(config.blendShapes).forEach(([name, value]) => {
         morphValues[name] = value;
       });
-      
+
       Object.entries(morphValues).forEach(([name, value]) => {
         if (blendShapeMap[name]) {
           blendShapeMap[name].forEach(({ mesh, index }) => {
@@ -597,30 +600,30 @@ async function loadPresetCharacter(preset) {
           });
         }
       });
-      
+
       buildCategorizedBlendShapesUI();
     }
-    
-    // 3. Load clothing
+
+
     if (config.clothing) {
-      
+
       const clothingToEquip = Object.entries(config.clothing)
         .filter(([category, item]) => item && item.r2Key);
-      
+
       for (const [category, item] of clothingToEquip) {
         const clothingItem = CLOTHES.find(c => c.r2Key === item.r2Key);
-        
+
         if (clothingItem) {
           await equipClothing(clothingItem);
           await new Promise(r => setTimeout(r, 500));
         }
       }
       rebuildMaterialTargets();
-      
-      // Wait a bit more for everything to settle
+
+
       await new Promise(r => setTimeout(r, 500));
-      
-      // Re-apply blend shapes to clothing
+
+
       Object.entries(morphValues).forEach(([name, value]) => {
         if (blendShapeMap[name]) {
           blendShapeMap[name].forEach(({ mesh, index }) => {
@@ -631,25 +634,25 @@ async function loadPresetCharacter(preset) {
         }
       });
     }
-    
-    // 4. Apply textures - materialTargets should be ready now
+
+
     if (config.textures) {
-      
+
       for (const [materialKey, texture] of Object.entries(config.textures)) {
         if (!texture || !texture.r2Key) {
           continue;
         }
-        
-        // Check if materialTarget exists
+
+
         if (!materialTargets[materialKey]) {
           continue;
         }
-        
+
         const textureData = TEXTURES.find(t => t.r2_key === texture.r2Key);
-        
+
         if (textureData) {
           activeMaterialTarget = materialKey;
-          
+
           const texturePreset = {
             id: textureData.id,
             label: textureData.name,
@@ -662,7 +665,7 @@ async function loadPresetCharacter(preset) {
             isPremium: textureData.is_premium,
             material_domain: textureData.material_domain
           };
-          
+
           try {
             await applyTexturePreset(texturePreset);
             await new Promise(r => setTimeout(r, 300));
@@ -672,43 +675,43 @@ async function loadPresetCharacter(preset) {
         }
       }
     }
-    
-    // 5. Apply colors AFTER textures with delay
+
+
     if (config.colors) {
       console.log("\n=== APPLYING COLORS ===");
-      
-      // IMPORTANT: Wait longer for textures to fully load
+
+
       await new Promise(r => setTimeout(r, 1000));
-      
+
       Object.entries(config.colors).forEach(([key, colorHex]) => {
         const target = materialTargets[key];
         if (!target) {
           console.warn(`⚠ No target for ${key}`);
           return;
         }
-        
+
         console.log(`✓ Applying ${colorHex} to ${key}`);
-        
+
         target.meshes.forEach(mesh => {
           const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
           mats.forEach(mat => {
             if (mat?.color) {
-              mat.color.set(colorHex);  // Use .set() instead of .copy()
+              mat.color.set(colorHex);
               mat.needsUpdate = true;
             }
           });
         });
       });
-      
+
       console.log("✓ Colors applied");
     }
-    
-    // 6. Apply material properties
+
+
     if (config.materials) {
-      
+
       Object.entries(config.materials).forEach(([key, props]) => {
         const target = materialTargets[key];
-        
+
         if (!target) {
           return;
         }
@@ -725,7 +728,7 @@ async function loadPresetCharacter(preset) {
       });
     }
     showToast(`✅ Loaded: ${preset.name}`);
-    
+
   } catch (error) {
     showToast(`Failed to load preset: ${error.message}`);
   }
@@ -733,7 +736,7 @@ async function loadPresetCharacter(preset) {
 async function saveCurrentAsOfficialPreset(metadata) {
   try {
     showToast("Saving preset...");
-    
+
     const config = presetSystem.captureState({
       currentBaseMesh,
       morphValues,
@@ -741,15 +744,15 @@ async function saveCurrentAsOfficialPreset(metadata) {
       loadedClothingMeshes,
       materialTargets,
     });
-    
+
     const validation = presetSystem.validateConfig(config);
     if (!validation.valid) {
       showToast(`Invalid: ${validation.errors.join(', ')}`);
       return;
     }
-    
+
     const result = await presetSystem.saveAsOfficialPreset(config, metadata);
-    
+
     if (result.success) {
       showToast(`✅ Saved: ${metadata.name}`);
     } else {
@@ -760,11 +763,11 @@ async function saveCurrentAsOfficialPreset(metadata) {
   }
 }
 
-// Helper to save from console
+
 window.savePreset = function(name, description, category = 'casual', tags = []) {
   saveCurrentAsOfficialPreset({ name, description, category, tags });
 };
-/* ---------------- UI MODES ---------------- */
+
 
 const topButtons = document.querySelectorAll(".top-btn[data-mode]");
 const allPanels = [
@@ -793,19 +796,19 @@ topButtons.forEach(btn => {
 });
 
 function setUIMode(mode) {
-  // Button active state
+
   topButtons.forEach(b => b.classList.remove("active"));
   document
     .querySelector(`.top-btn[data-mode="${mode}"]`)
     ?.classList.add("active");
 
-  // Hide all panels
+
   allPanels.forEach(id => {
     const panel = document.getElementById(id);
     if (panel) panel.classList.remove("active");
   });
 
-  // Show panels for mode
+
   MODE_PANELS[mode]?.forEach(id => {
     const panel = document.getElementById(id);
     if (panel) panel.classList.add("active");
@@ -824,10 +827,10 @@ if(mode === "customize"){
 }
 if(mode === "clothes")
 {
-  updateCategoryCounts(currentBaseMesh.id);
+  if (currentBaseMesh) updateCategoryCounts(currentBaseMesh.id);
 }
 
-  // Track panel opened
+
   if (window.posthog) {
     const eventMap = {
       'base': 'base_mesh_panel_opened',
@@ -837,39 +840,39 @@ if(mode === "clothes")
       'animations': 'animation_panel_opened',
       'randomizer': 'randomizer_panel_opened'
     };
-    
+
     if (eventMap[mode]) {
       posthog.capture(eventMap[mode], { panel: mode });
     }
   }
 }
-/* ---------------- APP STARTUP ---------------- */
+
 window.addEventListener('DOMContentLoaded', async () => {
-  // 1. Initialize Three.js scene
+
   init();
-  
-  // 2. Start animation loop
+
+
   animate();
-  
-  // 3. Load all assets (base meshes, clothes, textures, animations)
+
+
   await loadAllAssets();
-  
-  // 4. Initialize UI
+
+
   setUIMode("base");
   initPlansOverlayControls();
-  
-  // 5. Initialize texture painter
+
+
   initializeTexturePainterV2();
-  
-  // 6. Initialize preset system (shows overlay on first visit)
-  await initPresetSystem();
+
+
+  try { await initPresetSystem(); } catch (error) { console.error('Preset startup failed', error); document.getElementById('preset-overlay').style.display = 'none'; showToast('Presets could not load. You can still use the base mesh library.'); }
 });
-/* ---------------- INIT ---------------- */
+
 
 function init() {
-  //
+
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x1e1e1e);
+  scene.background = new THREE.Color(0x161c27);
 
   camera = new THREE.PerspectiveCamera(
     45,
@@ -880,7 +883,7 @@ function init() {
   camera.position.set(0, 1.5, 3);
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   document.getElementById("viewport").appendChild(renderer.domElement);
 
   setupLights();
@@ -893,7 +896,7 @@ function init() {
   onResize();
   animate();
 }
-/* ---------------- BASE MESH UI ---------------- */
+
 function buildBaseMeshUI() {
   const panel = document.getElementById("basemesh-panel");
   panel.innerHTML = "";
@@ -916,15 +919,15 @@ function buildBaseMeshUI() {
     name.className = "base-mesh-name";
     name.textContent = mesh.name;
 
-    // Add credit badge
+
     const creditBadge = document.createElement("div");
     creditBadge.className = "credit-badge";
-    creditBadge.textContent = mesh.priceCredits || 1;
-    
+    creditBadge.textContent = mesh.priceCredits ?? 1;
+
     card.append(preview, name, creditBadge);
     panel.appendChild(card);
 
-    // Fetch blob URL for preview thumbnail only — never cache blob URLs
+
     getAssetUrl("basemesh", mesh.r2Key).then(url => {
       preview.innerHTML = "";
       const previewInstance = createPreview({ container: preview, gltfPath: url });
@@ -943,11 +946,11 @@ function buildBaseMeshUI() {
   });
 }
 
-/* ---------------- LOAD BASE MESH ---------------- */
+
 async function loadBaseMesh(meshData, onLoaded = null) {
   if (!meshData) return;
 
-  // Track base mesh clicked
+
   if (window.posthog) {
     posthog.capture('base_mesh_clicked', {
       mesh_id: meshData.id,
@@ -957,20 +960,20 @@ async function loadBaseMesh(meshData, onLoaded = null) {
   }
 
   resetClothingUI();
-  
-  // FIX BUG 2: Clear all custom textures when changing base mesh
+
+
   Object.keys(meshTextureData).forEach(meshId => {
     delete meshTextureData[meshId];
   });
-  
+
   currentBaseMesh = meshData;
 
-  // Highlight active card
+
   document.querySelectorAll(".base-mesh-card").forEach(c => {
     c.classList.toggle("active", c.dataset.id === meshData.id);
   });
 
-  // Update category counts for this base mesh
+
   updateCategoryCounts(meshData.r2Key);
 
   try {
@@ -979,8 +982,8 @@ async function loadBaseMesh(meshData, onLoaded = null) {
       url,
       gltf => {
         onModelLoaded(gltf);
-        
-        // Track successful load
+
+
         if (window.posthog) {
           posthog.capture('base_mesh_loaded', {
             mesh_id: meshData.id,
@@ -988,15 +991,15 @@ async function loadBaseMesh(meshData, onLoaded = null) {
             success: true
           });
         }
-        
-        if (onLoaded) onLoaded(); // resolve promise for randomizer await
+
+        if (onLoaded) onLoaded();
       },
       undefined,
       err => {
         console.error("Failed to load GLB:", err?.message || err);
         showToast("Failed to load mesh — please try again");
-        
-        // Track load failure
+
+
         if (window.posthog) {
           posthog.capture('base_mesh_load_failed', {
             mesh_id: meshData.id,
@@ -1004,7 +1007,7 @@ async function loadBaseMesh(meshData, onLoaded = null) {
             error: err?.message || 'Unknown error'
           });
         }
-        
+
         currentBaseMesh = null;
         if (onLoaded) onLoaded();
       }
@@ -1025,10 +1028,12 @@ function onModelLoaded(gltf) {
   collectMeshes(currentModel);
   setupAnimation(gltf);
   collectBlendShapes(currentModel);
+  document.getElementById("stage-empty").hidden = true;
+  document.getElementById("editor-status-text").textContent = "Character ready · " + (currentBaseMesh?.name || "Untitled");
   frameCameraToObject(currentModel);
   rebuildMaterialTargets();
 }
-/* ---------------- MODEL HELPERS ---------------- */
+
 function cleanupPreviousModel() {
   if (!currentModel) return;
 
@@ -1082,7 +1087,7 @@ function setupAnimation(gltf) {
   mixer = new THREE.AnimationMixer(gltf.scene);
   mixer.clipAction(gltf.animations[0]).play();
 }
-/* ---------------- BLEND SHAPES ---------------- */
+
 function collectBlendShapes(root) {
   Object.keys(blendShapeMap).forEach(k => delete blendShapeMap[k]);
 
@@ -1113,38 +1118,38 @@ function collectBlendShapesFromObject(root) {
   });
 }
 
-/* ---------------- UI: BLEND SHAPES ---------------- */
-// ============================================================================
-// BLEND SHAPE CATEGORIZATION SYSTEM
-// Add these functions to main.js
-// ============================================================================
 
-/**
- * Categorize blend shapes by prefix (before underscore)
- * Example: "Eyes_Width" → category "Eyes"
- */
+
+
+
+
+
+
+
+
+
 function categorizeBlendShapes(blendShapeNames) {
   const categories = {};
-  const specialCategories = ['Gender']; // Always first, highlighted
-  
+  const specialCategories = ['Gender'];
+
   blendShapeNames.forEach(name => {
     let category = 'Other';
-    
-    // Check if it's a special category (exact match)
+
+
     if (specialCategories.includes(name)) {
       category = name;
     } else if (name.includes('_')) {
-      // Extract prefix before underscore
+
       category = name.split('_')[0];
     }
-    
+
     if (!categories[category]) {
       categories[category] = [];
     }
-    
+
     categories[category].push(name);
   });
-  
+
   return categories;
 }
 
@@ -1157,94 +1162,94 @@ function getBlendShapeCategoryIcon(categoryName) {
 function buildCategorizedBlendShapesUI() {
   const panel = document.getElementById('blendshape-panel');
   if (!panel) return;
-  
+
   panel.innerHTML = '';
-  
-  // Get all blend shape names from blendShapeMap
+
+
   const allNames = [];
   for (const [name] of Object.entries(blendShapeMap)) {
     allNames.push(name);
-    // Initialize morphValues if not set
+
     if (morphValues[name] === undefined) {
       morphValues[name] = 0;
     }
   }
-  
+
   if (allNames.length === 0) {
     panel.innerHTML = '<p style="color: #888; padding: 20px; text-align: center;">No blend shapes available</p>';
     return;
   }
-  
-  // Categorize
+
+
   const categorized = categorizeBlendShapes(allNames);
-  
-  // Render Gender first (if exists)
+
+
   if (categorized['Gender']) {
     renderBlendShapeCategory(panel, 'Gender', categorized['Gender'], true);
     delete categorized['Gender'];
   }
-  
-  // Then render other categories alphabetically
+
+
   const sortedCategories = Object.keys(categorized).sort();
   sortedCategories.forEach(categoryName => {
     renderBlendShapeCategory(panel, categoryName, categorized[categoryName], false);
   });
-  
+
   console.log(`✅ Built categorized blend shapes: ${sortedCategories.length} categories`);
 }
 
-/**
- * Render a single blend shape category panel
- */
+
+
+
 function renderBlendShapeCategory(panel, categoryName, blendShapeNames, isSpecial = false) {
-  // Create category container
+
   const categoryDiv = document.createElement('div');
   categoryDiv.className = `blend-category${isSpecial ? ' special' : ''} collapsed`;
-  
-  // Create header
+
+
   const header = document.createElement('div');
   header.className = 'blend-category-header';
-  
+
   const iconUrl = getBlendShapeCategoryIcon(categoryName);
-  
+
   header.innerHTML = `
     <img src="${iconUrl}" class="blend-category-icon" onerror="this.style.display='none'" alt="${categoryName}">
     <span class="blend-category-name">${categoryName}</span>
     <span class="blend-category-chevron">▼</span>
   `;
-  
-  // Create content container
+
+
   const content = document.createElement('div');
   content.className = 'blend-category-content';
-  
-  // Add blend shape sliders to content
+
+
   blendShapeNames.forEach(shapeName => {
     const sliderItem = createBlendShapeSliderItem(shapeName);
     content.appendChild(sliderItem);
   });
-  
-  // Toggle collapse on header click
+
+
   header.addEventListener('click', () => {
     categoryDiv.classList.toggle('collapsed');
   });
-  
-  // Assemble and add to panel
+
+
   categoryDiv.appendChild(header);
   categoryDiv.appendChild(content);
   panel.appendChild(categoryDiv);
 }
 
-/**
- * Create a blend shape slider item (individual slider)
- */
+
+
+
 function createBlendShapeSliderItem(shapeName) {
   const item = document.createElement('div');
   item.className = 'blend-shape-item';
-  
+
   const label = document.createElement('label');
   label.className = 'blend-shape-label';
   label.textContent = shapeName;
-  
+
   const slider = document.createElement('input');
   slider.type = 'range';
   slider.className = 'blend-shape-slider';
@@ -1252,12 +1257,12 @@ function createBlendShapeSliderItem(shapeName) {
   slider.max = '1';
   slider.step = '0.01';
   slider.value = morphValues[shapeName] || 0;
-  
+
   slider.addEventListener('input', (e) => {
     const value = parseFloat(e.target.value);
     morphValues[shapeName] = value;
-    
-    // Apply to all meshes with this blend shape
+
+
     if (blendShapeMap[shapeName]) {
       blendShapeMap[shapeName].forEach(({ mesh, index }) => {
         if (mesh.morphTargetInfluences) {
@@ -1266,14 +1271,14 @@ function createBlendShapeSliderItem(shapeName) {
       });
     }
   });
-  
+
   item.appendChild(label);
   item.appendChild(slider);
-  
+
   return item;
 }
 
-/* ---------------- CLOTHES UI ---------------- */
+
 const clothesCategoryButtons = document.querySelectorAll(".clothes-category");
 const clothesItemsTitle = document.getElementById("clothes-items-title");
 const clothesItemsGrid = document.querySelector(".clothes-items-grid");
@@ -1282,8 +1287,8 @@ const clothesItemsPanel = document.getElementById("clothes-items-panel");
 clothesCategoryButtons.forEach(btn => {
   btn.addEventListener("click", () => {
     const category = btn.dataset.category;
-    
-    // Track category click
+
+
     if (window.posthog) {
       posthog.capture('clothing_category_clicked', {
         category: category,
@@ -1295,30 +1300,30 @@ clothesCategoryButtons.forEach(btn => {
     clothesCategoryButtons.forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
 
-    clothesItemsPanel.classList.add("active"); // ✅ ADD THIS
+    clothesItemsPanel.classList.add("active");
     clothesItemsTitle.textContent = category;
 
     buildClothingList(category);
   });
 });
 
-// Update category counts based on current base mesh
+
 function updateCategoryCounts(baseMeshId) {
   const categories = ["shirts", "jacket", "pants", "shoes", "gloves", "hair", "facialHair", "headwear", "glasses", "accessories"];
-  
+
   categories.forEach(category => {
-    const count = CLOTHES.filter(c => 
+    const count = CLOTHES.filter(c =>
       c.baseMesh === baseMeshId && c.category === category
     ).length;
-    
-    // Update the count span for this category
+
+
     const button = document.querySelector(`.clothes-category[data-category="${category}"]`);
     if (button) {
       const countSpan = button.querySelector('.item-count');
       if (countSpan) {
         countSpan.textContent = `(${count})`;
-        
-        // Optional: dim button if no items
+
+
         if (count === 0) {
           button.style.opacity = '0.5';
           button.style.cursor = 'default';
@@ -1346,7 +1351,7 @@ function buildClothingList(category) {
     return;
   }
 
-  // 🔹 NONE OPTION
+
 const noneCard = document.createElement("div");
 noneCard.className = "clothing-card none-card";
 
@@ -1396,7 +1401,7 @@ panel.appendChild(noneCard);
 
     card.appendChild(label);
 
-    // Fetch blob URL for thumbnail — never cache blob URLs
+
     getAssetUrl(item.category, item.r2Key).then(url => {
       preview.innerHTML = "";
       createPreview({ container: preview, gltfPath: url });
@@ -1406,7 +1411,7 @@ panel.appendChild(noneCard);
 
     card.dataset.itemId = item.id;
     card.onclick = () => {
-      // Highlight this card, remove from others
+
       panel.querySelectorAll(".clothing-card, .clothing-card-none")
         .forEach(c => c.classList.remove("active"));
       card.classList.add("active");
@@ -1415,7 +1420,7 @@ panel.appendChild(noneCard);
     panel.appendChild(card);
   });
 
-  // Highlight whichever card is currently equipped (or none)
+
   const equipped = equippedClothes[category];
   if (equipped) {
     const activeCard = panel.querySelector(`[data-item-id="${equipped.id}"]`);
@@ -1425,7 +1430,7 @@ panel.appendChild(noneCard);
   }
 }
 async function equipClothing(item) {
-  // Track item clicked
+
   if (window.posthog) {
     posthog.capture('clothing_item_clicked', {
       item_id: item.id,
@@ -1434,13 +1439,13 @@ async function equipClothing(item) {
       is_premium: item.priceCredits > 0
     });
   }
-  
-  // Unequip existing
+
+
   if (equippedClothes[item.category]) {
     unequipClothing(item.category);
   }
 
-  // Always get a fresh URL — presigned URLs expire in 60s
+
   try {
     item.path = await getAssetUrl(item.category, item.r2Key);
   } catch (err) {
@@ -1454,8 +1459,8 @@ async function equipClothing(item) {
     gltf = await loader.loadAsync(item.path);
   } catch(err) {
     console.error("Failed to load clothing GLB:", err?.message || err);
-    
-    // Track equip failure
+
+
     if (window.posthog) {
       posthog.capture('clothing_equip_failed', {
         item_id: item.id,
@@ -1464,7 +1469,7 @@ async function equipClothing(item) {
         error: err?.message || 'Unknown error'
       });
     }
-    
+
     showToast("Failed to load item — please try again");
     return;
   }
@@ -1481,7 +1486,7 @@ async function equipClothing(item) {
 
   clothingRoot.traverse(obj => {
     if (obj.isSkinnedMesh) {
-      // 🔑 CRITICAL FIX
+
       obj.bind(characterSkeleton, bindMatrix);
       obj.frustumCulled = false;
     }
@@ -1504,10 +1509,10 @@ equippedClothes[item.category] = item.id;
     r2Key: item.r2Key,
     name: item.name,
     category: item.category,
-    clothing: item 
+    clothing: item
 };
 
-  // Track successful equip
+
   if (window.posthog) {
     posthog.capture('clothing_equipped', {
       item_id: item.id,
@@ -1539,7 +1544,7 @@ function unequipClothing(category) {
   if (root.parent === currentModel) {
     currentModel.remove(root);
   }
-// 🔑 REMOVE CLOTHING FROM BLENDSHAPE MAP
+
 Object.keys(blendShapeMap).forEach(name => {
   blendShapeMap[name] = blendShapeMap[name].filter(
     entry => entry.mesh.parent !== root
@@ -1626,12 +1631,12 @@ function unequipAllClothes() {
 }
 
 
-/* ---------------- EXPORT UI ---------------- */
+
 const exportBtn = document.getElementById("export-btn");
 
 if (exportBtn) {
   exportBtn.addEventListener("click", async () => {
-    // Track export panel opened
+
     if (window.posthog) {
       posthog.capture('export_panel_opened', {
         base_mesh: currentBaseMesh?.name,
@@ -1662,18 +1667,18 @@ if (exportBtn) {
 function renderExportPreview() {
   const container = document.getElementById("export-preview-container");
   if (!container || !currentModel) return;
-  
-  // Clear previous preview
+
+
   container.innerHTML = "";
-  
-  // Create dedicated preview scene
+
+
   const previewScene = new THREE.Scene();
   previewScene.background = new THREE.Color(0x1e1e1e);
-  
-  // Clone current model with all modifications
+
+
   const modelClone = currentModel.clone(true);
-  
-  // Copy morph target influences
+
+
   modelClone.traverse(obj => {
     if (obj.isSkinnedMesh && obj.morphTargetInfluences) {
       const original = currentModel.getObjectByProperty('uuid', obj.uuid);
@@ -1682,44 +1687,44 @@ function renderExportPreview() {
       }
     }
   });
-  
+
   previewScene.add(modelClone);
-  
-  // Add lights
+
+
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
   previewScene.add(ambientLight);
-  
+
   const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
   dirLight.position.set(5, 10, 7.5);
   previewScene.add(dirLight);
-  
+
   const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
   fillLight.position.set(-5, 0, -5);
   previewScene.add(fillLight);
-  
-  // Camera
+
+
   const previewCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
-  
-  // Auto-frame model
+
+
   const box = new THREE.Box3().setFromObject(modelClone);
   const center = box.getCenter(new THREE.Vector3());
   const size = box.getSize(new THREE.Vector3());
   const maxDim = Math.max(size.x, size.y, size.z);
-  
+
   previewCamera.position.set(
     center.x,
     center.y + maxDim * 0.3,
     center.z + maxDim * 2
   );
   previewCamera.lookAt(center);
-  
-  // Renderer
+
+
   const previewRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
   previewRenderer.setSize(400, 400);
   previewRenderer.setPixelRatio(window.devicePixelRatio);
   container.appendChild(previewRenderer.domElement);
-  
-  // Animate preview
+
+
   let animFrameId;
   function animatePreview() {
     animFrameId = requestAnimationFrame(animatePreview);
@@ -1727,8 +1732,8 @@ function renderExportPreview() {
     previewRenderer.render(previewScene, previewCamera);
   }
   animatePreview();
-  
-  // Store cleanup function
+
+
   container._cleanup = () => {
     if (animFrameId) cancelAnimationFrame(animFrameId);
     previewRenderer.dispose();
@@ -1753,10 +1758,20 @@ document.getElementById("export-panel-close")?.addEventListener("click", () => {
   document.getElementById("export-panel-overlay").classList.add("hidden");
 });
 
+let exportInProgress = false;
 async function handleExport(type, format) {
+  if (format === 'fbx') { showToast('FBX conversion is temporarily disabled. Choose GLB or GLTF.'); return; }
+  if (!['glb', 'gltf'].includes(format) || !['full', 'animation'].includes(type)) return;
+  if (!currentModel || !currentBaseMesh) { showToast('Choose a character before exporting.'); return; }
+  if (type === 'animation' && !activeAction) { showToast('Select an animation before exporting.'); return; }
+  if (exportInProgress) return;
+  exportInProgress = true;
+  try { await performExport(type, format); } finally { exportInProgress = false; }
+}
+async function performExport(type, format) {
   const exportStartTime = Date.now();
-  
-  // Track export initiated
+
+
   if (window.posthog) {
     posthog.capture('export_initiated', {
       type: type,
@@ -1769,12 +1784,12 @@ async function handleExport(type, format) {
   if (!session) return;
 
   const currentCredits = parseInt(document.getElementById("credits-count").textContent, 10) || 0;
-  
+
   let cost = 0;
   let exportName = "";
 
   if (type === "full") {
-    cost = currentBaseMesh.priceCredits || 1;
+    cost = currentBaseMesh.priceCredits ?? 1;
     exportName = "Full Character";
   } else if (type === "animation") {
     cost = 0;
@@ -1863,25 +1878,25 @@ async function exportAnimationOnly(format) {
 async function exportAsGLTF(format, includeModel = true) {
   return new Promise(async (resolve, reject) => {
     const exporter = new GLTFExporter();
-    
-    // Get user's subscription tier
+
+
     const tier = await getUserSubscriptionTier();
     const includeBlendShapes = hasBlendShapeExportAccess(tier);
-    
-    // Determine which model to export
+
+
     let modelToExport = currentModel;
-    
+
     if (!includeBlendShapes) {
-      // FREE USER: Bake blend shapes
+
       console.log('🔒 Free tier: Baking blend shapes into mesh');
       modelToExport = bakeBlendShapesIntoMesh(currentModel);
-      
+
       showToast('Exporting with baked blend shapes (Free plan)', 2000);
     } else {
-      // PREMIUM/STUDIO: Keep blend shapes
+
       console.log('✅ Premium/Studio tier: Including blend shapes');
-      
-      // Ensure morph target influences are preserved
+
+
       currentModel.traverse(obj => {
         if (obj.isSkinnedMesh && obj.morphTargetInfluences) {
           obj.morphTargetInfluences = obj.morphTargetInfluences.map(v => v);
@@ -1912,8 +1927,8 @@ async function exportAsGLTF(format, includeModel = true) {
           }
 
           downloadBlob(blob, filename);
-          
-          // Track export with blend shape status
+
+
           if (window.posthog) {
             posthog.capture('character_exported_glb', {
               format: format,
@@ -1922,7 +1937,7 @@ async function exportAsGLTF(format, includeModel = true) {
               blend_shapes_baked: !includeBlendShapes
             });
           }
-          
+
           resolve();
         } catch (err) {
           reject(err);
@@ -1947,9 +1962,11 @@ function exportAnimationAsGLTF(format) {
     }
 
     const exporter = new GLTFExporter();
-    
+
     const skeletonRoot = new THREE.Group();
-    const firstMesh = currentModel.children.find(c => c.isSkinnedMesh);
+    let firstMesh;
+    currentModel.traverse(child => { if (!firstMesh && child.isSkinnedMesh) firstMesh = child; });
+    if (!firstMesh?.skeleton?.bones.length) { reject(new Error('No animation skeleton found')); return; }
     if (firstMesh?.skeleton) {
       skeletonRoot.add(firstMesh.skeleton.bones[0].clone(true));
     }
@@ -1990,25 +2007,26 @@ function exportAnimationAsGLTF(format) {
 }
 
 async function exportAsFBX() {
+  throw new Error("FBX conversion is temporarily disabled.");
   const { data: { session } } = await supabase.auth.getSession();
-  
+
   if (!session?.access_token) {
     showToast("Please sign in to export FBX");
     return;
   }
 
   try {
-    // Get user's subscription tier
+
     const tier = await getUserSubscriptionTier();
     const includeBlendShapes = hasBlendShapeExportAccess(tier);
-    
+
     if (!includeBlendShapes) {
       showToast("Preparing FBX export (blend shapes will be baked)...");
     } else {
       showToast("Preparing FBX export...");
     }
 
-    // Export current model as GLB first
+
     const glbBlob = await new Promise((resolve, reject) => {
       if (!currentModel) {
         reject(new Error("No model loaded"));
@@ -2016,19 +2034,19 @@ async function exportAsFBX() {
       }
 
       const exporter = new GLTFExporter();
-      
-      // Determine which model to export
+
+
       let modelToExport = currentModel;
-      
+
       if (!includeBlendShapes) {
-        // FREE USER: Bake blend shapes
+
         console.log('🔒 Free tier: Baking blend shapes for FBX export');
         modelToExport = bakeBlendShapesIntoMesh(currentModel);
       } else {
-        // PREMIUM/STUDIO: Keep blend shapes
+
         console.log('✅ Premium/Studio tier: Including blend shapes in FBX');
       }
-      
+
       const options = {
         binary: true,
         animations: mixer && mixer._actions ? Array.from(mixer._actions).map(a => a._clip) : [],
@@ -2047,9 +2065,9 @@ async function exportAsFBX() {
 
     console.log(`GLB prepared: ${(glbBlob.size / 1024).toFixed(2)} KB`);
 
-    // Send to conversion service
+
     showToast("Converting to FBX (this may take 30-60 seconds)...");
-    
+
     const formData = new FormData();
     formData.append('file', glbBlob, 'character.glb');
 
@@ -2066,7 +2084,7 @@ async function exportAsFBX() {
       try {
         errorData = await response.json();
         console.error('Worker error response:', errorData);
-        
+
         if (errorData.creditRefunded) {
           showToast(`Export failed: ${errorData.error || 'Unknown error'}. Credit refunded.`, 4000);
         } else {
@@ -2079,30 +2097,30 @@ async function exportAsFBX() {
       return;
     }
 
-    // Check response headers for metadata
+
     const textureCount = response.headers.get('X-Textures-Count');
     const fbxSize = response.headers.get('X-FBX-Size');
-    
+
     console.log(`FBX exported: ${fbxSize ? (parseInt(fbxSize) / 1024).toFixed(2) + ' KB' : 'unknown size'}`);
     console.log(`Textures included: ${textureCount || '0'}`);
 
-    // Download ZIP file (contains FBX + textures)
+
     const zipBlob = await response.blob();
     const filename = `character_${Date.now()}_fbx.zip`;
     downloadBlob(zipBlob, filename);
-    
-    // Show success with blend shape status
-    let message = textureCount > 0 
+
+
+    let message = textureCount > 0
       ? `FBX exported! ${textureCount} texture${textureCount > 1 ? 's' : ''} included.`
       : "FBX exported successfully!";
-    
+
     if (!includeBlendShapes) {
       message += " (Blend shapes baked - upgrade to Premium for editable blend shapes)";
     }
-    
+
     showToast(message, 5000);
-    
-    // Track export
+
+
     if (window.posthog) {
       posthog.capture('character_exported_fbx', {
         subscription_tier: tier,
@@ -2111,22 +2129,22 @@ async function exportAsFBX() {
         texture_count: textureCount
       });
     }
-    
-    // Refresh credits display
+
+
     const { data: userData } = await supabase
       .from('users')
       .select('credits')
       .eq('id', session.user.id)
       .single();
-    
+
     if (userData) {
       const creditsEl = document.getElementById('credits-count');
       if (creditsEl) creditsEl.textContent = userData.credits;
     }
-    
+
   } catch (error) {
     console.error('FBX export error:', error);
-    
+
     if (error.message?.includes('creditRefunded')) {
       showToast("Export failed. Credit refunded.", 3000);
     } else {
@@ -2136,9 +2154,10 @@ async function exportAsFBX() {
 }
 
 async function exportAnimationAsFBX() {
-  // Animation-only FBX export
+  throw new Error("FBX conversion is temporarily disabled.");
+
   showToast("Animation-only FBX export coming soon!");
-  // TODO: Implement animation-only export
+
   return Promise.resolve();
 }
 
@@ -2152,53 +2171,56 @@ function downloadBlob(blob, filename) {
   URL.revokeObjectURL(link.href);
 }
 
-// ============================================================
-// EXPORT PANEL STATE & HANDLERS
-// ============================================================
+
+
+
 let selectedExportType = null;
 let selectedFormat = null;
 
-window.selectExportType = function(type) {
+window.selectExportType = function(type, cardElement) {
   selectedExportType = type;
   document.querySelectorAll('.export-type-card').forEach(card => {
     card.style.borderColor = 'transparent';
   });
-  event.currentTarget.style.borderColor = '#6c63ff';
-  const cost = type === 'full' ? (currentBaseMesh?.priceCredits || 1) : 0;
+  document.querySelectorAll('.export-type-card').forEach(card => { card.classList.toggle('selected', card === cardElement); card.setAttribute('aria-pressed', String(card === cardElement)); });
+  const cost = type === 'full' ? (currentBaseMesh?.priceCredits ?? 1) : 0;
   document.getElementById('full-cost').textContent = cost;
   updateExportButton();
 };
 
 window.selectFormat = async function(format, buttonElement) {
+  if (format === 'fbx' || buttonElement?.disabled) { showToast('FBX conversion is temporarily disabled.'); return; }
+  if (!['glb', 'gltf'].includes(format)) return;
+  document.querySelectorAll('.format-btn').forEach(button => { button.classList.toggle('selected', button === buttonElement); button.setAttribute('aria-pressed', String(button === buttonElement)); });
   console.log('selectFormat called with:', format, 'button:', buttonElement);
-  
-  // Store the button reference BEFORE any async operations
+
+
   const clickedButton = buttonElement;
-  
-  // Check if FBX requires premium/studio
+
+
   if (format === 'fbx') {
-    // Get current session
+
     const { data: { session } } = await supabase.auth.getSession();
-    
+
     if (!session?.access_token) {
       showToast("Please sign in to export FBX");
       return;
     }
-    
+
     try {
       const planResponse = await fetch(`${WORKER_URL}/check-plan`, {
         headers: { 'Authorization': `Bearer ${session.access_token}` }
       });
-      
+
       if (planResponse.ok) {
         const planData = await planResponse.json();
         console.log('Plan data:', planData);
-        
+
         if (!planData.features.fbxExport) {
           showToast("FBX export not available for Free plan");
           return;
         }
-        
+
         console.log('✅ FBX export allowed for user');
       } else {
         showToast("Failed to verify plan");
@@ -2210,18 +2232,18 @@ window.selectFormat = async function(format, buttonElement) {
       return;
     }
   }
-  
-  // If we got here, format is allowed - select it
+
+
   console.log('Setting selectedFormat to:', format);
   selectedFormat = format;
-  
-  // Update button styles - clear all first
+
+
   document.querySelectorAll('.format-btn').forEach(btn => {
     btn.style.borderColor = 'transparent';
     btn.style.background = '#2a2a2a';
   });
-  
-  // Highlight the selected button
+
+
   if (clickedButton) {
     clickedButton.style.borderColor = '#6c63ff';
     clickedButton.style.background = '#3a3a3a';
@@ -2229,8 +2251,8 @@ window.selectFormat = async function(format, buttonElement) {
   } else {
     console.warn('⚠️ No button reference');
   }
-  
-  // Update the export button text
+
+
   updateExportButton();
   console.log('✅ Export button updated');
 };
@@ -2238,14 +2260,14 @@ window.selectFormat = async function(format, buttonElement) {
 function updateExportButton() {
   const btn = document.getElementById('final-export-btn');
   if (!btn) return;
-  
+
   if (selectedExportType && selectedFormat) {
     btn.disabled = false;
     btn.style.opacity = '1';
     btn.style.cursor = 'pointer';
     const typeLabel = selectedExportType === 'full' ? 'Full Character' : 'Animation Only';
     const formatLabel = selectedFormat.toUpperCase();
-    const cost = selectedExportType === 'full' ? (currentBaseMesh?.priceCredits || 1) : 0;
+    const cost = selectedExportType === 'full' ? (currentBaseMesh?.priceCredits ?? 1) : 0;
     const costText = cost > 0 ? ` (${cost} Credit${cost > 1 ? 's' : ''})` : ' (FREE)';
     btn.textContent = `Export ${typeLabel} as ${formatLabel}${costText}`;
     btn.onclick = () => handleExport(selectedExportType, selectedFormat);
@@ -2258,7 +2280,7 @@ function updateExportButton() {
   }
 }
 
-/* ---------------- LOOP ---------------- */
+
 function animate() {
   requestAnimationFrame(animate);
 
@@ -2269,7 +2291,7 @@ function animate() {
   controls.update();
   renderer.render(scene, camera);
 }
-/* ---------------- MATERIALS ---------------- */
+
 const textureLoader = new THREE.TextureLoader();
 const baseColorPicker = document.getElementById("baseColorPicker");
 const textureGrid = document.getElementById("texture-grid");
@@ -2278,16 +2300,16 @@ async function applyTexturePreset(preset) {
   const target = materialTargets[activeMaterialTarget];
   if (!target) return;
 
-  // Check if premium texture and user has access
+
   if (preset.isPremium) {
     const { data: { session } } = await supabase.auth.getSession();
-    
+
     if (!session) {
       showToast("Premium texture - Login required");
       return;
     }
 
-    // Check user plan from user_credits table
+
     const { data: userCredits } = await supabase
       .from("user_credits")
       .select("plan")
@@ -2295,17 +2317,17 @@ async function applyTexturePreset(preset) {
       .single();
 
     const userPlan = userCredits?.plan || "free";
-    
+
     if (userPlan !== "premium" && userPlan !== "studio") {
       showToast("Premium texture - Upgrade to Premium or Studio");
-      // Optionally show upgrade modal
+
       return;
     }
   }
 
   target.materialState.texture = preset;
 
-  // Load diffuse/albedo texture (always present)
+
   let mapUrl = null;
   if (preset.r2Key) {
     try {
@@ -2315,7 +2337,7 @@ async function applyTexturePreset(preset) {
     }
   }
 
-  // Load additional PBR maps if they exist
+
   let normalMapUrl = null;
   let metallicMapUrl = null;
   let roughnessMapUrl = null;
@@ -2353,7 +2375,7 @@ async function applyTexturePreset(preset) {
     }
   }
 
-  // Apply textures to all meshes in the target
+
   target.meshes.forEach(mesh => {
     const mats = Array.isArray(mesh.material)
       ? mesh.material
@@ -2362,7 +2384,7 @@ async function applyTexturePreset(preset) {
     mats.forEach(mat => {
       if (!mat) return;
 
-      // Apply diffuse/albedo
+
       if (mapUrl) {
         mat.map = textureLoader.load(mapUrl);
         mat.map.colorSpace = THREE.SRGBColorSpace;
@@ -2371,32 +2393,32 @@ async function applyTexturePreset(preset) {
         mat.map = null;
       }
 
-      // Apply normal map
+
       if (normalMapUrl) {
         mat.normalMap = textureLoader.load(normalMapUrl);
       } else {
         mat.normalMap = null;
       }
 
-      // Apply metallic map
+
       if (metallicMapUrl) {
         mat.metalnessMap = textureLoader.load(metallicMapUrl);
-        mat.metalness = 1.0; // Enable metalness when map is present
+        mat.metalness = 1.0;
       } else {
         mat.metalnessMap = null;
-        mat.metalness = 0.0; // Default non-metallic
+        mat.metalness = 0.0;
       }
 
-      // Apply roughness map
+
       if (roughnessMapUrl) {
         mat.roughnessMap = textureLoader.load(roughnessMapUrl);
-        mat.roughness = 1.0; // Let the map control roughness
+        mat.roughness = 1.0;
       } else {
         mat.roughnessMap = null;
-        mat.roughness = 0.5; // Default mid-roughness
+        mat.roughness = 0.5;
       }
 
-      // Apply ambient occlusion map
+
       if (aoMapUrl) {
         mat.aoMap = textureLoader.load(aoMapUrl);
         mat.aoMapIntensity = 1.0;
@@ -2446,8 +2468,8 @@ function rebuildMaterialTargetsUI() {
       rebuildMaterialTargetsUI();
       syncMaterialUI();
       buildTextureGrid();
-      
-      // FIX: Update texture dropdown when switching materials
+
+
       if (meshTextureData[key]) {
         currentPainterMesh = key;
         updateTextureUI(key);
@@ -2461,9 +2483,9 @@ function rebuildMaterialTargetsUI() {
 function rebuildMaterialTargets() {
   materialTargets = {};
 
-  // Base mesh → skin — read ACTUAL current color from mesh material
+
   if (baseSkinnedMeshes.length) {
-    // Get real current color from the mesh, not a hardcoded white
+
     let currentColor = new THREE.Color("#ffffff");
     const firstMesh = baseSkinnedMeshes[0];
     if (firstMesh?.material) {
@@ -2482,7 +2504,7 @@ function rebuildMaterialTargets() {
     };
   }
 
-  // Clothes
+
 Object.entries(loadedClothingMeshes).forEach(([id, data]) => {
   const { root, materialDomain } = data;
 
@@ -2493,8 +2515,8 @@ Object.entries(loadedClothingMeshes).forEach(([id, data]) => {
   materialTargets[id] = {
     label: id,
     meshes,
-    domain: materialDomain || "fabric", // 🔑 NOW DYNAMIC
-    clothing: data.clothing,  // Reference to clothing object (has uv_map)
+    domain: materialDomain || "fabric",
+    clothing: data.clothing,
     materialState: {
       color: new THREE.Color("#ffffff"),
       texture: null
@@ -2519,15 +2541,15 @@ function buildTextureGrid() {
   const target = materialTargets[activeMaterialTarget];
   if (!target) return;
 
-  // Get all textures for this domain
+
   let presets = TEXTURE_PRESETS[target.domain] || [];
-  
-  // Filter by compatible mesh if we have currentBaseMesh
+
+
   if (currentBaseMesh) {
-    presets = presets.filter(preset => 
-      preset.compatibleMesh === "all" || 
+    presets = presets.filter(preset =>
+      preset.compatibleMesh === "all" ||
       preset.compatibleMesh === currentBaseMesh.r2Key ||
-      !preset.compatibleMesh // Handle legacy data without compatibleMesh
+      !preset.compatibleMesh
     );
   }
 
@@ -2544,8 +2566,8 @@ function buildTextureGrid() {
     const item = document.createElement("div");
     item.className = "texture-item";
     item.title = preset.label;
-    
-    // Create premium badge if needed
+
+
     if (preset.isPremium) {
       const badge = document.createElement("div");
       badge.className = "premium-badge";
@@ -2566,9 +2588,9 @@ function buildTextureGrid() {
       item.appendChild(badge);
     }
 
-    // Use diffuse texture as thumbnail
+
     if (preset.r2Key) {
-      // Fetch URL and apply as background
+
       getAssetUrl("textures", preset.r2Key).then(url => {
         item.style.backgroundImage = `url(${url})`;
         item.style.backgroundSize = "cover";
@@ -2584,7 +2606,7 @@ function buildTextureGrid() {
     textureGrid.appendChild(item);
   });
 }
-/* ---------------- Randomisation Configartion ---------------- */
+
 document.querySelectorAll('[data-rand]').forEach(input => {
   const key = input.dataset.rand;
   input.addEventListener('change', () => {
@@ -2615,22 +2637,22 @@ function updateResetButton() {
 }
 async function randomizeCharacter() {
 
-  /* ---------- BASE MESH ---------- */
-  // If baseMesh is checked, load a random mesh and WAIT for it to finish
-  // before randomizing everything else — no more early return
+
+
+
   if (randomizerConfig.baseMesh && BASE_MESHES.length) {
     const mesh = BASE_MESHES[Math.floor(Math.random() * BASE_MESHES.length)];
-    // Wait for the model to fully load before continuing
+
     await new Promise(resolve => {
-      loadBaseMesh(mesh, resolve); // resolve called inside onModelLoaded
+      loadBaseMesh(mesh, resolve);
     });
   }
 
   if (!currentBaseMesh) return;
 
-  /* ---------- BASE COLOR ---------- */
+
   if (randomizerConfig.colors) {
-    // Randomize base mesh skin color
+
     const baseTarget = materialTargets["base"];
     if (baseTarget) {
       const randColor = new THREE.Color().setHSL(
@@ -2643,14 +2665,14 @@ async function randomizeCharacter() {
         const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
         mats.forEach(mat => mat?.color?.copy(randColor));
       });
-      // Sync color picker if base is active target
+
       if (activeMaterialTarget === "base") {
         baseColorPicker.value = `#${randColor.getHexString()}`;
       }
     }
   }
 
-  /* ---------- CLOTHES ---------- */
+
   if (randomizerConfig.clothes) {
     unequipAllClothes();
 
@@ -2671,17 +2693,17 @@ async function randomizeCharacter() {
     }
   }
 
-  /* ---------- BLEND SHAPES ---------- */
+
   if (randomizerConfig.blendShapes && Object.keys(morphValues).length > 0) {
     Object.keys(morphValues).forEach(key => {
       morphValues[key] = Math.random() * 0.6;
     });
-    // Morphs are applied every frame via applyMorphsPerFrame() in animate()
+
   }
 
-  /* ---------- CLOTHING MATERIAL COLORS ---------- */
+
   Object.entries(materialTargets).forEach(([key, target]) => {
-    if (key === "base") return; // already handled above
+    if (key === "base") return;
     activeMaterialTarget = key;
 
     if (randomizerConfig.colors) {
@@ -2706,12 +2728,12 @@ async function randomizeCharacter() {
     }
   });
 
-  // Restore activeMaterialTarget to base and sync UI
+
   activeMaterialTarget = Object.keys(materialTargets)[0] || "base";
   syncMaterialUI();
   rebuildMaterialTargetsUI();
 
-  /* ---------- ANIMATION ---------- */
+
   if (randomizerConfig.animation) {
     const anims = ANIMATIONS.filter(
       a => a.baseMesh === currentBaseMesh.id
@@ -2726,18 +2748,18 @@ function resetCharacter() {
 
   unequipAllClothes();
 
-  /* ---------- RESET BLEND SHAPES ---------- */
+
   Object.keys(morphValues).forEach(k => {
     morphValues[k] = 0;
   });
 
-  /* ---------- RESET ANIMATION ---------- */
+
   if (mixer) {
     mixer.stopAllAction();
     activeAction = null;
   }
 
-  /* ---------- RESET SKIN ---------- */
+
   rebuildMaterialTargets();
   activeMaterialTarget = "base";
 
@@ -2753,7 +2775,7 @@ function resetCharacter() {
 }
 
 
-/* ---------------- ANIMATION UI ---------------- */
+
 const animationsList = document.getElementById("animations-list");
 function buildAnimationUI() {
   animationsList.innerHTML = "";
@@ -2782,8 +2804,8 @@ function buildAnimationUI() {
     card.append(preview, label);
     animationsList.appendChild(card);
 
-    // Fetch animation URL + base mesh URL for preview
-    // Fetch blob URLs for thumbnail — never cache blob URLs
+
+
     Promise.all([
       getAssetUrl("animation", anim.r2Key),
       currentBaseMesh ? getAssetUrl("basemesh", currentBaseMesh.r2Key) : Promise.resolve(null)
@@ -2822,7 +2844,7 @@ async function loadAnimation(animData) {
     mixer = new THREE.AnimationMixer(currentModel);
   }
 
-  // 🔑 HARD STOP ALL PREVIOUS ACTIONS
+
   mixer.stopAllAction();
 
   activeAction = mixer.clipAction(gltf.animations[0]);
@@ -2838,7 +2860,7 @@ async function loadAnimation(animData) {
   activeAction.play();
 }
 
-/* ---------------- SCENE HELPERS ---------------- */
+
 function addGroundGrid() {
   scene.add(new THREE.GridHelper(10, 20, 0x444444, 0x222222));
 }
@@ -2860,7 +2882,7 @@ controls.dampingFactor = 0.08;
 controls.minDistance = 1.2;
 controls.maxDistance = 6;
 }
-/* ---------------- CAMERA ---------------- */
+
 function frameCameraToObject(object) {
   const box = new THREE.Box3().setFromObject(object);
 
@@ -2869,7 +2891,7 @@ function frameCameraToObject(object) {
 
   const center = box.getCenter(new THREE.Vector3());
 
-  // Character-focused target (upper body)
+
   const targetY = box.min.y + height * 0.6;
 
   const target = new THREE.Vector3(
@@ -2880,11 +2902,11 @@ function frameCameraToObject(object) {
 
   const distance = height * 8;
 
-  // 📸 Camera in FRONT of character, slightly above, tilted down
+
   camera.position.set(
     center.x,
-    targetY + height * 7, // height gives downward angle
-    center.z - distance      // FRONT (important)
+    targetY + height * 7,
+    center.z - distance
   );
 
   controls.target.copy(target);
@@ -2933,12 +2955,13 @@ function onResize() {
     height = viewport.clientHeight;
   }
 
+  if (!width || !height) return;
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
   renderer.setSize(width, height, false);
 }
 
-/* ================= Texture Painter Mode ================= */
+
 const painterMode = document.getElementById("texture-painter-mode");
 const painterViewport = document.getElementById("painter-viewport");
 const exitPainterBtn = document.getElementById("exit-painter");
@@ -2949,19 +2972,19 @@ function enterPainterMode() {
   if (!currentModel || !activeMaterialTarget) return;
   isPainterMode = true;
 
-  // remember where we came from
+
   const activeBtn = document.querySelector(".top-btn.active");
   previousUIMode = activeBtn?.dataset.mode || "materials";
 
-  // hide customization UI (CLASS-BASED, not style)
+
   document.getElementById("top-panel").classList.add("hidden");
   document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
   document.getElementById("clothes-items-panel")?.classList.remove("active");
   painterControls = controls;
-  // show painter
+
   painterMode.classList.remove("hidden");
 
-  // move renderer
+
   originalViewportParent = renderer.domElement.parentElement;
   painterViewport.appendChild(renderer.domElement);
 
@@ -2969,7 +2992,7 @@ function enterPainterMode() {
   onResize();
 }
 function exitPainterMode() {
-  // Track painter closed
+
   if (window.posthog) {
     const paintDuration = Date.now() - (window.painterStartTime || Date.now());
     posthog.capture('painter_closed', {
@@ -2980,22 +3003,22 @@ function exitPainterMode() {
 
   isPainterMode = false;
 
-  // FIX BUG 1: Re-enable orbit controls
+
   if (controls) {
     controls.enabled = true;
   }
 
-  // restore renderer
+
   if (originalViewportParent) {
     originalViewportParent.appendChild(renderer.domElement);
   }
 
   painterMode.classList.add("hidden");
 
-  // restore UI (NO inline styles)
+
   document.getElementById("top-panel").classList.remove("hidden");
 
-  // restore previous mode cleanly
+
   setUIMode(previousUIMode);
 
   onResize();
@@ -3007,54 +3030,54 @@ document.getElementById("open-texture-painter").addEventListener("click", () => 
     return;
   }
 
-  // Get mesh ID
+
   const meshId = activeMaterialTarget;
-  
-  // Ensure texture data exists for this mesh
+
+
   ensureMeshTextureData(meshId, maxAllowedResolution);
-  
-  // Set current mesh
+
+
   currentPainterMesh = meshId;
-  
-  // Get mesh data
+
+
   const meshData = meshTextureData[meshId];
-  
-  // If no textures exist, create the first one
+
+
   if (Object.keys(meshData.textures).length === 0) {
     createTextureForMesh(meshId, 'custom_1', 'Custom Texture 1', true);
     meshData.selectedTexture = 'custom_1';
   }
-  
-  // FIX BUG 2: Use the last selected texture (not always custom_1)
+
+
   currentTextureName = meshData.selectedTexture || 'custom_1';
-  
-  // Get the texture data
+
+
   const texData = meshData.textures[currentTextureName];
-  
-  // Set painter canvas
+
+
   painterCanvas = texData.canvas;
   painterTargetMesh = target.meshes[0];
-  
-  // Create TexturePainter instance
+
+
   texturePainter = new TexturePainter({
     canvas: painterCanvas,
     mesh: painterTargetMesh,
     material: painterTargetMesh.material,
     texture: texData.texture
   });
-  
-  // FIX BUG 2: Apply the current texture to the character when opening painter
+
+
   applySelectedTexture();
-  
-  // Sync color picker with current brush color
+
+
   const currentColor = texturePainter.color || '#ffffff';
   document.getElementById('paint-color').value = currentColor;
-  
-  // Update UI
+
+
   updateTextureUI(meshId);
   updateResetButtonState();
-  
-  // Load UV map
+
+
   getUVMapForActiveTarget().then(uvPath => {
     if (!uvPath) return;
     const img = new Image();
@@ -3065,15 +3088,15 @@ document.getElementById("open-texture-painter").addEventListener("click", () => 
       updateTextureView();
     };
   });
-  
+
   showUVOverlay = true;
   document.getElementById("toggle-uv").classList.toggle("active", showUVOverlay);
   document.getElementById("uv-opacity").value = uvOpacity * 100;
-  
+
   enterPainterMode();
   updateTextureView();
   texturePainter.setTool("draw");
-  
+
   document.querySelectorAll(".tool-btn").forEach(b =>
     b.classList.toggle("active", b.dataset.tool === "draw")
   );
@@ -3081,7 +3104,7 @@ document.getElementById("open-texture-painter").addEventListener("click", () => 
 
 
 exitPainterBtn.addEventListener("click", exitPainterMode);
-/* ================= Texture Painter Logic ================= */
+
 let texZoom = 1;
 let texOffsetX = 0;
 let texOffsetY = 0;
@@ -3093,13 +3116,13 @@ document.querySelectorAll(".tool-btn").forEach(b => {
   b.addEventListener('click', () => {
     const tool = b.dataset.tool;
     texturePainter.setTool(tool);
-    
-    // Update active state
+
+
     document.querySelectorAll(".tool-btn").forEach(btn =>
       btn.classList.toggle("active", btn === b)
     );
-    
-    // Enable/disable camera controls based on tool
+
+
     if (tool === 'move' && painterControls) {
       painterControls.enabled = true;
     } else if (painterControls) {
@@ -3116,19 +3139,19 @@ const brushSizeInput = document.getElementById("brush-size");
 brushSizeInput.addEventListener("input", e => {
   if (!texturePainter) return;
   texturePainter.setBrushSize(parseInt(e.target.value, 10));
-  updateTextureView();  // Update cursor size preview
+  updateTextureView();
 });
 function updateTextureView() {
-  // UI canvas (the visible one on the right)
+
   const uiCanvas = document.getElementById("texture-canvas");
   if (!uiCanvas) return;
 
   const uiCtx = uiCanvas.getContext("2d");
 
-  // Offscreen canvas (the real texture data)
+
   if (!painterCanvas) return;
 
-  // Ensure UI canvas matches texture resolution
+
   if (
     uiCanvas.width !== painterCanvas.width ||
     uiCanvas.height !== painterCanvas.height
@@ -3137,11 +3160,11 @@ function updateTextureView() {
     uiCanvas.height = painterCanvas.height;
   }
 
-  // Clear preview
+
   uiCtx.setTransform(1, 0, 0, 1, 0, 0);
   uiCtx.clearRect(0, 0, uiCanvas.width, uiCanvas.height);
 
-  // Apply pan + zoom (PREVIEW ONLY)
+
   uiCtx.translate(
     uiCanvas.width / 2 + texOffsetX,
     uiCanvas.height / 2 + texOffsetY
@@ -3152,15 +3175,15 @@ function updateTextureView() {
     -painterCanvas.height / 2
   );
 
-  // Draw texture preview
+
   uiCtx.drawImage(painterCanvas, 0, 0);
-  // ---------------------------------------
-// UV OVERLAY (PREVIEW ONLY, LOCKED)
-// ---------------------------------------
+
+
+
 if (showUVOverlay && uvOverlayImage) {
   uiCtx.save();
 
-  uiCtx.globalAlpha = uvOpacity; // adjust opacity here
+  uiCtx.globalAlpha = uvOpacity;
   uiCtx.drawImage(
     uvOverlayImage,
     0,
@@ -3175,36 +3198,36 @@ if (showUVOverlay && uvOverlayImage) {
 
 function drawBrushCursor(uiCanvas, uiCtx) {
   if (!texturePainter || canvasMouseX === null || canvasMouseY === null) return;
-  
+
   const tool = texturePainter.tool;
-  
-  // Different cursors for different tools
+
+
   if (tool === "move") {
-    // Move tool uses native grab cursor
+
     return;
   }
-  
+
   if (tool === "draw" || tool === "erase") {
-    // Draw circle showing brush size
+
     const brushSize = texturePainter.brushSize || 10;
-    
+
     uiCtx.save();
     uiCtx.strokeStyle = tool === "erase" ? "#ff5555" : "#7c5cff";
     uiCtx.lineWidth = 2;
     uiCtx.setLineDash([4, 4]);
-    
-    // Draw circle at mouse position (in screen space, not texture space)
+
+
     uiCtx.beginPath();
     uiCtx.arc(canvasMouseX, canvasMouseY, brushSize * texZoom / 2, 0, Math.PI * 2);
     uiCtx.stroke();
-    
+
     uiCtx.restore();
   } else if (tool === "bucket") {
-    // Draw crosshair for bucket tool
+
     uiCtx.save();
     uiCtx.strokeStyle = "#7c5cff";
     uiCtx.lineWidth = 2;
-    
+
     const size = 10;
     uiCtx.beginPath();
     uiCtx.moveTo(canvasMouseX - size, canvasMouseY);
@@ -3212,7 +3235,7 @@ function drawBrushCursor(uiCanvas, uiCtx) {
     uiCtx.moveTo(canvasMouseX, canvasMouseY - size);
     uiCtx.lineTo(canvasMouseX, canvasMouseY + size);
     uiCtx.stroke();
-    
+
     uiCtx.restore();
   }
 }
@@ -3220,23 +3243,23 @@ function drawBrushCursor(uiCanvas, uiCtx) {
 function getTextureCoordsFromMouse(e, uiCanvas) {
   const rect = uiCanvas.getBoundingClientRect();
 
-  // Mouse position in UI canvas space
+
   const mx = e.clientX - rect.left;
   const my = e.clientY - rect.top;
 
-  // Move origin to canvas center
+
   let x = mx - uiCanvas.width / 2;
   let y = my - uiCanvas.height / 2;
 
-  // Undo pan
+
   x -= texOffsetX;
   y -= texOffsetY;
 
-  // Undo zoom
+
   x /= texZoom;
   y /= texZoom;
 
-  // Move origin to texture space
+
   x += painterCanvas.width / 2;
   y += painterCanvas.height / 2;
 
@@ -3280,22 +3303,22 @@ window.addEventListener("pointerup", () => {
   uiCanvas.style.cursor = "grab";
 });
 
-// ============================================================================
-// TEXTURE PAINTER - DRAWING MOUSE EVENTS
-// ============================================================================
+
+
+
 
 let isPaintingLocal = false;
 let lastPaintX = null;
 let lastPaintY = null;
 
-// Mouse down - start painting
+
 uiCanvas.addEventListener("mousedown", (e) => {
-  if (e.button !== 0) return; // Only left click
+  if (e.button !== 0) return;
   if (!texturePainter) return;
-  
+
   const tool = texturePainter.tool;
-  
-  // Move tool uses different behavior
+
+
   if (tool === "move") {
     isPanning = true;
     panStartX = e.clientX;
@@ -3303,34 +3326,34 @@ uiCanvas.addEventListener("mousedown", (e) => {
     uiCanvas.style.cursor = "grabbing";
     return;
   }
-  
-  // Get texture coordinates
+
+
   const coords = getTextureCoordsFromMouse(e, uiCanvas);
   if (!coords) return;
-  
-  // CRITICAL: Save history BEFORE painting starts (for undo)
+
+
   if (currentPainterMesh && currentTextureName) {
     saveToHistory(currentPainterMesh, currentTextureName);
   }
-  
+
   isPaintingLocal = true;
   lastPaintX = coords.x;
   lastPaintY = coords.y;
-  
-  // Start drawing on the actual texture canvas
+
+
   texturePainter.startDraw(coords.x, coords.y);
-  
-  // Update view
+
+
   updateTextureView();
 });
 
-// Mouse move - continue painting
+
 uiCanvas.addEventListener("mousemove", (e) => {
   if (!texturePainter) return;
-  
+
   const tool = texturePainter.tool;
-  
-  // Handle panning for move tool
+
+
   if (tool === "move" && isPanning) {
     texOffsetX += e.clientX - panStartX;
     texOffsetY += e.clientY - panStartY;
@@ -3339,32 +3362,32 @@ uiCanvas.addEventListener("mousemove", (e) => {
     updateTextureView();
     return;
   }
-  
-  // Handle painting
+
+
   if (!isPaintingLocal) return;
-  
+
   const coords = getTextureCoordsFromMouse(e, uiCanvas);
   if (!coords) return;
-  
-  // Draw on texture canvas
+
+
   texturePainter.draw(coords.x, coords.y);
-  
+
   lastPaintX = coords.x;
   lastPaintY = coords.y;
-  
-  // Update view
+
+
   updateTextureView();
 });
 
-// Mouse up - stop painting
+
 uiCanvas.addEventListener("mouseup", (e) => {
   if (e.button !== 0) return;
-  
+
   if (texturePainter?.tool === "move") {
     isPanning = false;
     uiCanvas.style.cursor = "grab";
   }
-  
+
   if (isPaintingLocal && texturePainter) {
     texturePainter.endDraw();
     isPaintingLocal = false;
@@ -3374,7 +3397,7 @@ uiCanvas.addEventListener("mouseup", (e) => {
   }
 });
 
-// Mouse leave - stop painting
+
 uiCanvas.addEventListener("mouseleave", () => {
   if (isPaintingLocal && texturePainter) {
     texturePainter.endDraw();
@@ -3382,13 +3405,13 @@ uiCanvas.addEventListener("mouseleave", () => {
     lastPaintX = null;
     lastPaintY = null;
   }
-  
+
   if (isPanning) {
     isPanning = false;
     uiCanvas.style.cursor = "grab";
   }
-  
-  // Clear cursor position
+
+
   canvasMouseX = null;
   canvasMouseY = null;
   updateTextureView();
@@ -3408,32 +3431,32 @@ function showToast(message, duration = 1500) {
     setTimeout(() => toast.classList.add("hidden"), 300);
   }, duration);
 }
-/* ------------------ UV MAPS ---------- */
-// UV maps are stored in the uvmaps bucket with compatible_mesh = baseMesh id
+
+
 async function getUVMapForActiveTarget() {
-  // Determine which asset we're painting (shirt, pants, or base mesh)
+
   let targetAsset = null;
   let assetType = "base mesh";
-  
-  // Check if we're editing a clothing item
+
+
   const target = materialTargets[activeMaterialTarget];
   if (target && target.clothing) {
-    // We're editing clothing (shirt, pants, etc.)
+
     targetAsset = target.clothing;
     assetType = target.clothing.type || "clothing";
   } else {
-    // We're editing the base mesh
+
     targetAsset = currentBaseMesh;
   }
-  
-  // Check if this asset has a UV map defined
+
+
   if (!targetAsset?.uv_map) {
     console.warn(`No UV map defined for ${assetType}:`, targetAsset?.id);
     return null;
   }
 
   try {
-    // Fetch UV map from uvmaps bucket
+
     const uvMapUrl = await getAssetUrl("uvmaps", targetAsset.uv_map, "public");
     console.log(`✓ Loaded UV map for ${assetType}:`, targetAsset.uv_map);
     return uvMapUrl;
@@ -3454,8 +3477,8 @@ uvOpacitySlider.oninput = e => {
   uvOpacity = parseInt(e.target.value, 10) / 100;
   updateTextureView();
 };
-/* ---------------- User Menus ---------------- */
-/* ---------------- User & Credits Menus ---------------- */
+
+
 
 const userBtn = document.getElementById("user-btn");
 const creditsBtn = document.getElementById("credits-btn");
@@ -3483,9 +3506,9 @@ document.addEventListener("click", () => {
 [userMenu, creditsMenu].forEach(menu => {
   menu.addEventListener("click", e => e.stopPropagation());
 });
-/* ================= Launch Overlay ================= */
 
-/* ================= Launch Overlay ================= */
+
+
 
 const launchOverlay = document.getElementById("launch-overlay");
 const closeLaunch = document.getElementById("close-launch");
@@ -3505,17 +3528,17 @@ if (launchOverlay && closeLaunch) {
   }
 
   closeLaunch.addEventListener("click", closeLaunchOverlay);
-  
+
   if (launchSignupBtn) {
     launchSignupBtn.addEventListener("click", () => {
       closeLaunchOverlay();
 
-      // Open signup modal
+
       const authOverlay = document.getElementById("auth-overlay");
       if (authOverlay) {
         authOverlay.classList.remove("hidden");
         document.body.style.overflow = "hidden";
-        // Switch to signup tab
+
         document.querySelectorAll("[data-auth-tab]").forEach(t => t.classList.remove("active"));
         document.querySelectorAll(".auth-panel").forEach(p => p.classList.remove("active"));
         document.querySelector("[data-auth-tab='signup']")?.classList.add("active");
@@ -3524,7 +3547,7 @@ if (launchOverlay && closeLaunch) {
     });
   }
 }
-// ================= AUTH UI =================
+
 
 const authOverlay = document.getElementById("auth-overlay");
 const closeAuthBtn = document.getElementById("close-auth");
@@ -3534,16 +3557,16 @@ const authSubmit = document.getElementById("auth-submit");
 const authTitle = document.getElementById("auth-title");
 const authError = document.getElementById("auth-error");
 
-let authMode = "signup"; // default
+let authMode = "signup";
 
-// Auth open buttons are dynamically bound inside updateUserMenu()
 
-// Close overlay
+
+
 closeAuthBtn.addEventListener("click", () => {
   authOverlay.classList.add("hidden");
 });
 
-// Switch tabs
+
 authTabs.forEach(tab => {
   tab.addEventListener("click", () => {
     authMode = tab.dataset.auth;
@@ -3560,18 +3583,18 @@ function updateAuthUI() {
 
   authSubmit.textContent =
     authMode === "signup" ? "Create Account" : "Login";
-  
-  // Show/hide signup checkboxes
+
+
   const signupCheckboxes = document.getElementById("signup-checkboxes");
   if (signupCheckboxes) {
     signupCheckboxes.style.display = authMode === "signup" ? "block" : "none";
   }
 }
 
-// Initialize auth UI
+
 updateAuthUI();
 
-// ================= EMAIL AUTH =================
+
 
 
 authSubmit.addEventListener("click", async () => {
@@ -3585,7 +3608,7 @@ authSubmit.addEventListener("click", async () => {
     return;
   }
 
-  // Validate terms checkbox for signup
+
   if (authMode === "signup") {
     const termsCheckbox = document.getElementById("terms-checkbox");
     if (termsCheckbox && !termsCheckbox.checked) {
@@ -3599,29 +3622,29 @@ authSubmit.addEventListener("click", async () => {
       const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
 
-      // Subscribe to newsletter if checked
+
       const newsletterCheckbox = document.getElementById("newsletter-checkbox");
       if (newsletterCheckbox && newsletterCheckbox.checked) {
         try {
           await supabase.from("newsletter").upsert({ email }, { onConflict: "email" });
         } catch (newsError) {
           console.error("Newsletter subscription failed:", newsError);
-          // Don't block signup if newsletter fails
+
         }
       }
 
-      // Supabase may require email confirmation — session may be null
+
       if (!data.session) {
         authError.style.color = "#4caf50";
         authError.textContent = "Check your email to confirm your account!";
         return;
       }
 
-      // onAuthStateChange will fire and call updateUserMenu automatically
+
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      // onAuthStateChange will handle the rest
+
     }
 
     document.getElementById("auth-overlay").classList.add("hidden");
@@ -3633,7 +3656,7 @@ authSubmit.addEventListener("click", async () => {
   }
 });
 
-// ================= OAUTH =================
+
 
 document.getElementById("github-auth").addEventListener("click", async () => {
   await supabase.auth.signInWithOAuth({
@@ -3644,7 +3667,7 @@ document.getElementById("github-auth").addEventListener("click", async () => {
   });
 });
 
-// ================= SETTINGS OVERLAY =================
+
 
 const settingsOverlay = document.getElementById("settings-overlay");
 const closeSettingsBtn = document.getElementById("close-settings");
@@ -3655,18 +3678,18 @@ if (closeSettingsBtn) {
   });
 }
 
-// Close on backdrop click
+
 settingsOverlay?.addEventListener("click", (e) => {
   if (e.target === settingsOverlay) settingsOverlay.style.display = "none";
 });
 
-// Cancel Subscription
+
 document.getElementById("cancel-subscription-btn")?.addEventListener("click", async () => {
   if (!confirm("Are you sure you want to cancel your subscription? You'll lose access to Premium features at the end of your billing period.")) {
     return;
   }
 
-  // Track cancellation attempt
+
   if (window.posthog) {
     posthog.capture('subscription_cancel_clicked');
   }
@@ -3675,7 +3698,7 @@ document.getElementById("cancel-subscription-btn")?.addEventListener("click", as
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    // Call worker to cancel subscription
+
     const response = await fetch(`${WORKER_URL}/cancel-subscription`, {
       method: 'POST',
       headers: {
@@ -3686,8 +3709,8 @@ document.getElementById("cancel-subscription-btn")?.addEventListener("click", as
 
     if (response.ok) {
       const result = await response.json();
-        
-        // Track successful cancellation
+
+
         if (window.posthog) {
           posthog.capture('subscription_cancelled', {
             user_id: session.user.id
@@ -3698,7 +3721,7 @@ document.getElementById("cancel-subscription-btn")?.addEventListener("click", as
         : "Subscription cancelled. Access continues until end of billing period.";
       showToast(msg, 4000);
       settingsOverlay.style.display = "none";
-      // Refresh plan badge to show it's cancelling
+
       const { data: { session: s } } = await supabase.auth.getSession();
       if (s) await fetchAndDisplayPlan(s.user.id);
     } else {
@@ -3711,10 +3734,10 @@ document.getElementById("cancel-subscription-btn")?.addEventListener("click", as
   }
 });
 
-// Delete Account (Disable)
+
 document.getElementById("delete-account-btn")?.addEventListener("click", async () => {
   const confirmed = prompt('Type "DELETE" to confirm account deletion:');
-  
+
   if (confirmed !== "DELETE") {
     showToast("Account deletion cancelled");
     return;
@@ -3724,7 +3747,7 @@ document.getElementById("delete-account-btn")?.addEventListener("click", async (
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    // Call worker to disable account
+
     const response = await fetch(`${WORKER_URL}/disable-account`, {
       method: 'POST',
       headers: {
@@ -3752,9 +3775,9 @@ document.getElementById("delete-account-btn")?.addEventListener("click", async (
 supabase.auth.onAuthStateChange((event, session) => {
   updateUserMenu(session ?? null);
 });
-// ============================================================================
-// TEXTURE PAINTER V2 - INIT & EVENT LISTENERS (data/undo/redo in TexturePainter.js)
-// ============================================================================
+
+
+
 
 async function initializeTexturePainterV2() {
   try {
@@ -3786,7 +3809,7 @@ async function initializeTexturePainterV2() {
 }
 
 function setupTexturePainterListeners() {
-  // Resolution
+
   document.getElementById('texture-resolution-select')
     .addEventListener('change', async (e) => {
       const newRes = parseInt(e.target.value);
@@ -3797,7 +3820,6 @@ function setupTexturePainterListeners() {
       showToast(`Resolution changed to ${newRes}x${newRes}`);
     });
 
-  // Active texture selector
   document.getElementById('active-texture-select')
     .addEventListener('change', (e) => {
       if (!currentPainterMesh) return;
@@ -3808,7 +3830,6 @@ function setupTexturePainterListeners() {
       });
     });
 
-  // Create new texture
   document.getElementById('create-new-texture-btn')
     .addEventListener('click', () => {
       if (!currentPainterMesh) { showToast('No mesh selected'); return; }
@@ -3823,7 +3844,6 @@ function setupTexturePainterListeners() {
       });
     });
 
-  // Reset texture
   document.getElementById('reset-texture-btn')
     .addEventListener('click', () => {
       if (!currentPainterMesh || !currentTextureName) return;
@@ -3836,14 +3856,14 @@ function setupTexturePainterListeners() {
       }
     });
 
-  // Keyboard shortcuts
+
   document.addEventListener('keydown', (e) => {
     if (!isPainterMode) return;
     if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(currentPainterMesh, currentTextureName, () => updateTextureView()); }
     if (e.ctrlKey && e.key === 'y') { e.preventDefault(); redo(currentPainterMesh, currentTextureName, () => updateTextureView()); }
   });
 
-  // Roughness
+
   document.getElementById('roughness-slider').addEventListener('input', (e) => {
     const value = parseFloat(e.target.value);
     document.getElementById('roughness-value').textContent = value.toFixed(2);
@@ -3851,7 +3871,7 @@ function setupTexturePainterListeners() {
       updateMaterialProperty(currentPainterMesh, currentTextureName, 'roughness', value, materialTargets);
   });
 
-  // Metalness
+
   document.getElementById('metalness-slider').addEventListener('input', (e) => {
     const value = parseFloat(e.target.value);
     document.getElementById('metalness-value').textContent = value.toFixed(2);
