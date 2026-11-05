@@ -1694,32 +1694,6 @@ async function purchaseCurrentCharacter() {
     .upload(purchase.filePath, blob, { contentType: "model/gltf-binary", upsert: false, cacheControl: "3600" });
   if (uploadError) throw new Error(`Could not save your character: ${uploadError.message}`);
 
-  if (purchase.freeCharacter) {
-    const completeResponse = await fetch(`${WORKER_URL}/complete-free-character`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
-      body: JSON.stringify({ purchaseId: purchase.purchaseId })
-    });
-    const completed = await completeResponse.json();
-    if (!completeResponse.ok) {
-      console.error("Included character could not be finalized; offering paid checkout:", completed.error);
-      const checkoutResponse = await fetch(`${WORKER_URL}/character-purchase-checkout`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ purchaseId: purchase.purchaseId, payNow: true })
-      });
-      const checkout = await checkoutResponse.json();
-      if (!checkoutResponse.ok || !checkout.url) throw new Error(checkout.error || completed.error || "Could not start checkout.");
-      showToast("Your character is ready for secure payment.", 3500);
-      window.location.assign(checkout.url);
-      return;
-    }
-    document.getElementById("export-panel-overlay")?.classList.add("hidden");
-    showToast("Your first character is saved to My Characters.", 4000);
-    await downloadPurchasedCharacter(purchase.purchaseId);
-    return;
-  }
-
   const checkoutResponse = await fetch(`${WORKER_URL}/character-purchase-checkout`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
