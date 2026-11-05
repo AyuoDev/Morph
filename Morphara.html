@@ -17,8 +17,8 @@
   <link rel="canonical" href="https://morphara.com/Morphara">
 
 <link rel="apple-touch-icon" href="images/morphara_icon.png">
-  <link rel="stylesheet" href="css/style.css?v=20261105-preview-fix-2">
-<link rel="stylesheet" href="css/editor.css?v=20261105-preview-fix-2">
+  <link rel="stylesheet" href="css/style.css?v=20261105-character-purchases">
+<link rel="stylesheet" href="css/editor.css?v=20261105-character-purchases">
 <script src="js/editor-ui.js" defer></script>
 
   <script type="importmap">
@@ -176,19 +176,12 @@
   <div class="top-section top-right top-actions">
     <button class="top-btn" id="export-btn">Export</button>
 
-    <button class="top-btn credits-btn" id="credits-btn">
-      💎 <span class="credits-count" id="credits-count">0</span>
-    </button>
+    <button class="top-btn" id="purchases-btn" type="button">My Characters</button>
 
     <button class="top-btn user-btn" id="user-btn">
       👤
     </button>
 
-
-    <div id="credits-menu" class="top-dropdown hidden">
-      <button class="dropdown-item open-plans">Memberships</button>
-      <button class="dropdown-item open-credits">Buy Credits</button>
-    </div>
 
     <div id="user-menu" class="top-dropdown hidden">
       <button class="dropdown-item">Sign Up</button>
@@ -249,13 +242,10 @@
   <div class="material-section">
     <label class="section-title">Texture Resolution</label>
     <select id="texture-resolution-select" class="material-select">
-      <option value="1024">1024x1024 (Free)</option>
-      <option value="2048" disabled>2048x2048 (Premium)</option>
-      <option value="4096" disabled>4096x4096 (Studio)</option>
+      <option value="1024">1024x1024</option>
+      <option value="2048">2048x2048</option>
+      <option value="4096">4096x4096</option>
     </select>
-    <p id="resolution-upgrade-hint">
-      Upgrade to Premium/Studio for higher resolutions
-    </p>
   </div>
 
 
@@ -463,147 +453,19 @@
 </div>
 
 
-<div id="plans-overlay" class="overlay hidden">
-
+<div id="purchases-overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="purchases-title">
   <div class="overlay-backdrop"></div>
-
-  <div class="overlay-panel">
-
-
-    <div class="overlay-header">
-      <h2>MemberShips & Credits</h2>
-      <button id="close-plans" class="icon-btn">✕</button>
-    </div>
-<div class="plans-visual">
-  <div class="visual-frame">
-    <video
-      class="character-preview"
-      src="videos/customization.mp4"
-      autoplay
-      muted
-      loop
-      playsinline
-    ></video>
-    <div class="visual-overlay"></div>
-
-  </div>
+  <section class="purchases-panel">
+    <header class="purchases-header">
+      <div><p class="purchases-eyebrow">YOUR LIBRARY</p><h2 id="purchases-title">Purchased Characters</h2></div>
+      <button id="close-purchases" class="icon-btn" type="button" aria-label="Close purchased characters">✕</button>
+    </header>
+    <p class="purchases-intro">Every character you buy stays here. Download it again whenever you need it.</p>
+    <div id="purchases-list" class="purchases-list" aria-live="polite"></div>
+  </section>
 </div>
-
-
-
-    <div class="overlay-tabs">
-      <button class="tab-btn active" data-tab="plans">MemberShip</button>
-      <button class="tab-btn" data-tab="credits">Buy Credits</button>
-    </div>
-
-
-    <div class="overlay-content">
-
-
-      <div class="tab-content active" id="tab-plans">
-<div class="billing-toggle">
-  <span class="billing-label active" data-billing="monthly">Monthly</span>
-  <div class="toggle-switch">
-    <div class="toggle-knob"></div>
-  </div>
-  <span class="billing-label" data-billing="yearly">
-    Yearly <em>-20%</em>
-  </span>
-</div>
-
-        <div class="plans-grid">
-
-
-          <div class="plan-card free">
-            <h3>FREE</h3>
-            <p class="price">$0</p>
-
-            <ul>
-              <li>Full editor access</li>
-              <li>Texture painting</li>
-              <li>Preview all content</li>
-              <li>1 Free export</li>
-            </ul>
-
-            <button class="plan-btn disabled">Current Plan</button>
-          </div>
-
-
-          <div class="plan-card premium highlight">
-            <h3>PREMIUM</h3>
-            <p class="price">
-  <span class="price-monthly">$9.99 / month</span>
-  <span class="price-yearly">$95.99 / year</span>
-</p>
-
-
-            <ul>
-              <li>15 Credits / month</li>
-              <li>Credits roll over (3 months)</li>
-              <li>2048 textures</li>
-              <li>No watermark</li>
-              <li>All meshes & clothes</li>
-            </ul>
-
-            <button class="plan-btn">Subscribe</button>
-          </div>
-
-
-          <div class="plan-card studio">
-            <h3>STUDIO</h3>
-            <p class="price"><span class="price-monthly">$29.99 / month</span>
-<span class="price-yearly">$287.99 / year</span>
-</p>
-
-            <ul>
-              <li>50 Credits / month</li>
-              <li>✔ GLB / GLTF export (FBX currently unavailable)</li>
-              <li>Credits roll over (6 months)</li>
-              <li>4096 textures</li>
-              <li>Batch exports</li>
-              <li>Commercial license</li>
-            </ul>
-
-            <button class="plan-btn">Subscribe</button>
-          </div>
-
-        </div>
-      </div>
-
-
-      <div class="tab-content" id="tab-credits">
-
-        <div class="credits-grid">
-
-          <div class="credit-pack">
-            <h3>5 Credits</h3>
-            <p class="price">$7.99</p>
-            <button class="plan-btn">Buy</button>
-          </div>
-
-          <div class="credit-pack">
-            <h3>10 Credits</h3>
-            <p class="price">$14.99</p>
-            <button class="plan-btn">Buy</button>
-          </div>
-
-          <div class="credit-pack">
-            <h3>25 Credits</h3>
-            <p class="price">$29.99</p>
-            <button class="plan-btn">Buy</button>
-          </div>
-
-        </div>
-
-      </div>
-
-    </div>
-  </div>
-</div>
-
-
 <div id="toast" class="toast hidden"></div>
-<script type="module" src="./main.js?v=20261105-preview-fix-2"></script>
+<script type="module" src="./main.js?v=20261105-character-purchases"></script>
 
 
 
@@ -634,16 +496,16 @@
         <div class="export-type-card" onclick="window.selectExportType('full', this)">
           <div class="export-type-icon">📦</div>
           <h4 class="export-type-name">Full Character</h4>
-          <p class="export-type-desc">Model + Textures + Animations</p>
+          <p class="export-type-desc">Complete model, colors, textures, and selected animation</p>
           <p class="export-type-cost-paid">
-            <span id="full-cost">1</span> Credit
+            One-time purchase · <span id="full-price">$1.99</span>
           </p>
         </div>
 
         <div class="export-type-card" onclick="window.selectExportType('animation', this)">
           <div class="export-type-icon">🎬</div>
           <h4 class="export-type-name">Animation Only</h4>
-          <p class="export-type-desc">Skeleton + Animation data</p>
+          <p class="export-type-desc">Download the selected animation for free</p>
           <p class="export-type-cost-free">FREE</p>
         </div>
       </div>
@@ -660,7 +522,7 @@
           GLTF <span class="format-label-sub"></span>
         </button>
         <button class="format-btn" data-format="fbx" disabled aria-disabled="true" title="FBX conversion is temporarily unavailable">FBX <span class="format-label-sub">Unavailable</span></button>
-    <p class="export-format-note">FBX conversion is temporarily disabled. Choose GLB or GLTF.</p></div>
+    <p class="export-format-note">Full characters are purchased as GLB files. Animation-only downloads are free.</p></div>
     </div>
 
     <button id="final-export-btn" class="final-export-btn" disabled>
@@ -689,9 +551,9 @@
       </div>
 
 
-      <div class="settings-section">
-        <h3>💳 Subscription</h3>
-        <p>Cancel your subscription. You'll keep access until the end of your billing period.</p>
+      <div class="settings-section" id="legacy-subscription-section" hidden>
+        <h3>Existing subscription</h3>
+        <p>Subscription sales have ended. Manage or cancel an existing Morphara plan here.</p>
         <button id="cancel-subscription-btn" class="settings-btn-danger">Cancel Subscription</button>
       </div>
 

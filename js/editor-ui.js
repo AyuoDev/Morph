@@ -19,7 +19,7 @@ document.getElementById('help-button').addEventListener('click',()=>help.showMod
 help.querySelector('button').addEventListener('click',()=>help.close());
 document.querySelectorAll('.icon-btn,.preset-close,.export-panel-close-btn').forEach(button=>{if(!button.hasAttribute('aria-label'))button.setAttribute('aria-label','Close dialog');});
 document.getElementById('user-btn').setAttribute('aria-label','Account menu');
-document.getElementById('credits-btn').setAttribute('aria-label','Credits and membership');
+document.getElementById('purchases-btn').setAttribute('aria-label','Purchased characters');
 document.getElementById('auth-email').setAttribute('aria-label','Email address');
 document.getElementById('auth-email').autocomplete='email';
 document.getElementById('auth-password').setAttribute('aria-label','Password');

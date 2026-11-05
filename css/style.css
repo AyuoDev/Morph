@@ -1250,6 +1250,123 @@ body.app {
   box-shadow: 0 30px 80px rgba(0,0,0,0.6);
 }
 
+#purchases-overlay {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+#purchases-overlay.hidden {
+  display: none;
+}
+
+.purchases-panel {
+  position: relative;
+  width: min(680px, 100%);
+  max-height: min(82vh, 760px);
+  overflow: auto;
+  padding: clamp(22px, 4vw, 38px);
+  border: 1px solid rgba(222, 215, 255, 0.18);
+  border-radius: 20px;
+  background: linear-gradient(145deg, #1b202b, #151922 72%);
+  color: #edf0f6;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.55);
+}
+
+.purchases-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.purchases-header h2 {
+  margin: 3px 0 0;
+  font: 500 clamp(24px, 4vw, 34px) 'Space Grotesk', sans-serif;
+}
+
+.purchases-eyebrow {
+  margin: 0;
+  color: #bba9ef;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+}
+
+.purchases-intro {
+  margin: 13px 0 24px;
+  color: #aab4c5;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.purchases-list {
+  display: grid;
+  gap: 10px;
+  color: #aab4c5;
+  font-size: 13px;
+}
+
+.purchase-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.purchase-item h3 {
+  margin: 0 0 5px;
+  color: #f1f2f7;
+  font-size: 14px;
+  font-weight: 550;
+}
+
+.purchase-item p {
+  margin: 0;
+  color: #9da8ba;
+  font-size: 11px;
+}
+
+.purchase-download-btn {
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: #c4b3f4;
+  color: #211a35;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.purchase-download-btn:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+#legacy-subscription-section[hidden] {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  #purchases-overlay {
+    padding: 12px;
+  }
+
+  .purchases-panel {
+    max-height: 90vh;
+    padding: 22px 16px;
+    border-radius: 15px;
+  }
+
+  .purchase-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
 
 .overlay-header {
   display: flex;

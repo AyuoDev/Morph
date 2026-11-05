@@ -6,7 +6,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 import { PresetOverlay } from "./js/PresetOverlay.js?v=20261105-preview-fix-2";
 import { PresetSystem } from "./js/PresetSystem.js";
-import { initPlansOverlayControls } from "./js/Controls.js";
 import { createPreview } from "./js/PreviewRenderer.js?v=20261105-preview-fix-2";
 import {
   TexturePainter,
@@ -162,6 +161,7 @@ function updateUserMenu(session) {
 
     menu.innerHTML = `
       <span class="user-email">${user.email}</span>
+      <button class="dropdown-item" id="my-characters-btn">📦 My Characters</button>
       <button class="dropdown-item" id="settings-btn">⚙️ Settings</button>
       <button class="dropdown-item" id="logout-btn">Log Out</button>
     `;
@@ -177,6 +177,13 @@ function updateUserMenu(session) {
       const emailEl = document.getElementById("settings-email");
       if (emailEl) emailEl.textContent = user.email;
 
+      const legacySubscriptionSection = document.getElementById("legacy-subscription-section");
+      if (legacySubscriptionSection) legacySubscriptionSection.hidden = true;
+      fetch(WORKER_URL + "/get-subscription-info", {
+        headers: { "Authorization": "Bearer " + session.access_token }
+      }).then(r => r.json()).then(data => {
+        if (legacySubscriptionSection) legacySubscriptionSection.hidden = !data.hasSub;
+      }).catch(() => {});
       fetch(WORKER_URL + "/check-plan", {
         headers: { "Authorization": "Bearer " + session.access_token }
       }).then(r => r.json()).then(data => {
@@ -184,6 +191,11 @@ function updateUserMenu(session) {
         const planEl = document.getElementById("settings-plan");
         if (planEl) planEl.textContent = names[data.plan] || "Free";
       }).catch(() => {});
+    });
+
+    document.getElementById("my-characters-btn").addEventListener("click", () => {
+      document.getElementById("user-menu").classList.add("hidden");
+      openPurchasedCharacters();
     });
 
     document.getElementById("logout-btn").addEventListener("click", async () => {
@@ -198,7 +210,8 @@ function updateUserMenu(session) {
     });
 
 
-    ensureUserCredits(user);
+    fetchAndDisplayPlan(user.id);
+    handleCharacterPurchaseReturn(session);
 
   } else {
 
@@ -220,27 +233,8 @@ function updateUserMenu(session) {
       });
     });
 
-    document.getElementById("credits-count").textContent = "0";
+
   }
-}
-
-
-async function ensureUserCredits(user) {
-
-  const { data, error } = await supabase
-    .from("users")
-    .select("credits")
-    .eq("id", user.id)
-    .single();
-
-  if (error) {
-    console.error("Error fetching credits:", error);
-  } else {
-    document.getElementById("credits-count").textContent = data.credits;
-  }
-
-
-  await fetchAndDisplayPlan(user.id);
 }
 
 
@@ -289,125 +283,6 @@ async function fetchAndDisplayPlan(userId) {
 
 
 
-async function getUserSubscriptionTier() {
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return 'free';
-
-    const res = await fetch(`${WORKER_URL}/check-plan`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!res.ok) return 'free';
-
-    const data = await res.json();
-    return data.plan || 'free';
-  } catch (error) {
-    console.error('Failed to get subscription tier:', error);
-    return 'free';
-  }
-}
-
-
-function hasBlendShapeExportAccess(tier) {
-  return ['premium', 'studio', 'admin'].includes(tier);
-}
-
-
-function bakeBlendShapesIntoMesh(model) {
-  console.log('🔒 Baking blend shapes into mesh for free tier export');
-
-  const bakedModel = model.clone(true);
-
-  bakedModel.traverse(obj => {
-    if (obj.isSkinnedMesh || obj.isMesh) {
-
-      if (obj.morphTargetInfluences && obj.morphTargetInfluences.length > 0) {
-        const geometry = obj.geometry;
-
-
-        const position = geometry.attributes.position;
-        const morphPosition = geometry.morphAttributes.position;
-
-        if (morphPosition && morphPosition.length > 0) {
-
-          const positions = position.array.slice();
-
-          console.log(`  Baking ${obj.morphTargetInfluences.length} blend shapes for ${obj.name}`);
-
-
-          for (let i = 0; i < obj.morphTargetInfluences.length; i++) {
-            const influence = obj.morphTargetInfluences[i];
-            if (influence === 0) continue;
-
-            const morphData = morphPosition[i];
-            if (!morphData) continue;
-
-
-            for (let j = 0; j < positions.length; j++) {
-              positions[j] += morphData.array[j] * influence;
-            }
-          }
-
-
-          geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-          geometry.attributes.position.needsUpdate = true;
-
-
-          geometry.computeVertexNormals();
-
-
-          delete geometry.morphAttributes;
-          obj.morphTargetInfluences = null;
-          obj.morphTargetDictionary = null;
-
-          console.log(`  ✓ Blend shapes baked into ${obj.name}`);
-        }
-      }
-    }
-  });
-
-  console.log('✓ All blend shapes baked into mesh');
-  return bakedModel;
-
-
-  document.querySelectorAll(".plan-card").forEach(card => {
-    card.classList.remove("active-plan");
-    const btn = card.querySelector(".plan-btn");
-    if (btn) {
-      btn.textContent = "Subscribe";
-      btn.disabled    = false;
-      btn.classList.remove("disabled");
-    }
-  });
-
-
-  const freeBtn = document.querySelector(".plan-card.free .plan-btn");
-  if (freeBtn) {
-    freeBtn.textContent = planName === "free" ? "Current Plan" : "Free";
-    freeBtn.disabled    = true;
-  }
-
-
-  if (planName !== "free") {
-    const activeCard = document.querySelector(`.plan-card.${planName}`);
-    if (activeCard) {
-      activeCard.classList.add("active-plan");
-      const btn = activeCard.querySelector(".plan-btn");
-      if (btn) {
-        btn.textContent = "Current Plan";
-        btn.disabled    = true;
-        btn.classList.add("disabled");
-      }
-    }
-  }
-}
-
-
 async function getAssetUrl(bucket, filename, mode = "public") {
   let res;
 
@@ -440,7 +315,7 @@ async function loadAllAssets() {
   try {
     const { data: assets, error } = await supabase
       .from("assets")
-      .select("id, name, type, r2_key, price_credits, compatible_mesh, uv_map")
+      .select("id, name, type, r2_key, compatible_mesh, uv_map")
       .order("name");
 
     if (error) throw error;
@@ -452,7 +327,6 @@ async function loadAllAssets() {
         id:            a.id,
         name:          a.name,
         r2Key:         a.r2_key,
-        priceCredits:  a.price_credits ?? 1,
         uv_map:        a.uv_map,
 
       }));
@@ -487,7 +361,6 @@ async function loadAllAssets() {
           baseMesh:       a.compatible_mesh,
           r2Key:          a.r2_key,
           materialDomain: materialDomain,
-          priceCredits:   a.price_credits ?? 0,
           uv_map:         a.uv_map
         };
       });
@@ -527,7 +400,6 @@ async function loadAllAssets() {
           r2KeyRoughness:  t.r2_key_roughness,
           r2KeyAO:         t.r2_key_ao,
           compatibleMesh:  t.compatible_mesh,
-          isPremium:       t.is_premium,
           map:             null
         });
       }
@@ -662,7 +534,6 @@ async function loadPresetCharacter(preset) {
             r2Key_roughness: textureData.r2_key_roughness,
             r2Key_ao: textureData.r2_key_ao,
             compatibleMesh: textureData.compatible_mesh,
-            isPremium: textureData.is_premium,
             material_domain: textureData.material_domain
           };
 
@@ -859,7 +730,6 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 
   setUIMode("base");
-  initPlansOverlayControls();
 
 
   initializeTexturePainterV2();
@@ -920,11 +790,7 @@ function buildBaseMeshUI() {
     name.textContent = mesh.name;
 
 
-    const creditBadge = document.createElement("div");
-    creditBadge.className = "credit-badge";
-    creditBadge.textContent = mesh.priceCredits ?? 1;
-
-    card.append(preview, name, creditBadge);
+    card.append(preview, name);
     panel.appendChild(card);
 
 
@@ -1436,7 +1302,6 @@ async function equipClothing(item) {
       item_id: item.id,
       item_name: item.name,
       category: item.category,
-      is_premium: item.priceCredits > 0
     });
   }
 
@@ -1519,7 +1384,6 @@ equippedClothes[item.category] = item.id;
       item_name: item.name,
       category: item.category,
       base_mesh: currentBaseMesh?.name,
-      is_premium: item.priceCredits > 0
     });
   }
 }
@@ -1645,19 +1509,16 @@ if (exportBtn) {
       });
     }
 
-    const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    showToast("Sign in to export");
-    document.getElementById("auth-overlay").classList.remove("hidden");
-    return;
-  }
-
   if (!currentBaseMesh) {
     showToast("Select a base mesh first");
     return;
   }
 
+  selectedExportType = null;
+  selectedFormat = null;
   document.getElementById("export-panel-overlay").classList.remove("hidden");
+  await refreshCharacterPrice();
+  updateExportButton();
   renderExportPreview();
   });
 } else {
@@ -1769,141 +1630,110 @@ async function handleExport(type, format) {
   try { await performExport(type, format); } finally { exportInProgress = false; }
 }
 async function performExport(type, format) {
-  const exportStartTime = Date.now();
-
-
-  if (window.posthog) {
-    posthog.capture('export_initiated', {
-      type: type,
-      format: format,
-      base_mesh: currentBaseMesh?.name
-    });
+  const overlay = document.getElementById("export-panel-overlay");
+  const content = overlay?.querySelector(".export-panel-content");
+  if (content) {
+    content.style.opacity = "0.55";
+    content.style.pointerEvents = "none";
   }
+  try {
+    if (type === "full") {
+      await purchaseCurrentCharacter();
+    } else {
+      await exportAnimationOnly(format);
+      showToast(`Animation exported as ${format.toUpperCase()} — free to download.`);
+      overlay?.classList.add("hidden");
+    }
+  } catch (error) {
+    console.error("Export or purchase error:", error);
+    showToast(error.message || "Could not complete this action. Please try again.", 3500);
+  } finally {
+    if (content) {
+      content.style.opacity = "1";
+      content.style.pointerEvents = "auto";
+    }
+  }
+}
 
+async function purchaseCurrentCharacter() {
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) return;
-
-  const currentCredits = parseInt(document.getElementById("credits-count").textContent, 10) || 0;
-
-  let cost = 0;
-  let exportName = "";
-
-  if (type === "full") {
-    cost = currentBaseMesh.priceCredits ?? 1;
-    exportName = "Full Character";
-  } else if (type === "animation") {
-    cost = 0;
-    exportName = "Animation Only";
+  if (!session) {
+    document.getElementById("auth-overlay")?.classList.remove("hidden");
+    throw new Error("Sign in to buy and save a character.");
   }
+  if (!currentModel || !currentBaseMesh) throw new Error("Choose a character before purchasing.");
 
-  if (cost > 0 && currentCredits < cost) {
-    showToast(`Need ${cost} credit(s) — you have ${currentCredits}`);
-    document.getElementById("export-panel-overlay").classList.add("hidden");
-    document.getElementById("plans-overlay").classList.remove("hidden");
-    const creditsTab = document.querySelector(".tab-btn[data-tab='credits']");
-    creditsTab?.click();
+  const blob = await exportAsGLTF("glb", true, false);
+  const configuration = presetSystem.captureState({
+    currentBaseMesh,
+    morphValues,
+    equippedClothes,
+    loadedClothingMeshes,
+    materialTargets
+  });
+  configuration.selectedAnimation = activeAction?.getClip()?.name || null;
+  configuration.outputFormat = "glb";
+  configuration.paintedTextureHashes = await getPaintedTextureHashes();
+
+  const prepareResponse = await fetch(`${WORKER_URL}/prepare-character-purchase`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+    body: JSON.stringify({
+      baseMeshId: currentBaseMesh.id,
+      characterName: `Customized ${currentBaseMesh.name}`,
+      configuration
+    })
+  });
+  const purchase = await prepareResponse.json();
+  if (!prepareResponse.ok) throw new Error(purchase.error || "Could not prepare this character.");
+
+  if (purchase.alreadyPurchased) {
+    await downloadPurchasedCharacter(purchase.purchaseId);
+    showToast("You already own this character. Downloaded it again.", 3500);
+    document.getElementById("export-panel-overlay")?.classList.add("hidden");
     return;
   }
 
-  const overlay = document.getElementById("export-panel-overlay");
-  overlay.querySelector(".export-panel-content").style.opacity = "0.5";
-  overlay.querySelector(".export-panel-content").style.pointerEvents = "none";
+  const { error: uploadError } = await supabase.storage
+    .from("character-purchases")
+    .upload(purchase.filePath, blob, { contentType: "model/gltf-binary", upsert: false, cacheControl: "3600" });
+  if (uploadError) throw new Error(`Could not save your character: ${uploadError.message}`);
 
-  try {
-    if (cost > 0) {
-      const configuration = {
-        baseMesh: currentBaseMesh?.id,
-        baseMeshName: currentBaseMesh?.name,
-        format,
-        exportType: type,
-        equippedClothes: Object.fromEntries(
-          Object.entries(equippedClothes).filter(([, v]) => v).map(([k, v]) => [k, v.id ?? v.name])
-        ),
-        blendShapes: { ...morphValues }
-      };
-
-      const { data, error } = await supabase.rpc("use_export_credit", {
-        p_user_id: session.user.id,
-        p_asset_id: currentBaseMesh.id,
-        p_format: format,
-        p_configuration: configuration
-      });
-
-      if (error) throw error;
-
-      if (!data.success) {
-        showToast(data.error ?? "Export failed");
-        return;
-      }
-
-      document.getElementById("credits-count").textContent = data.credits_remaining;
-    }
-
-    if (type === "full") {
-      await exportFullCharacter(format);
-    } else if (type === "animation") {
-      await exportAnimationOnly(format);
-    }
-
-    showToast(`${exportName} exported as ${format.toUpperCase()}!`);
-    overlay.classList.add("hidden");
-
-  } catch (err) {
-    console.error("Export error:", err);
-    showToast("Export failed — check console");
-  } finally {
-    overlay.querySelector(".export-panel-content").style.opacity = "1";
-    overlay.querySelector(".export-panel-content").style.pointerEvents = "auto";
-  }
+  const checkoutResponse = await fetch(`${WORKER_URL}/character-purchase-checkout`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+    body: JSON.stringify({ purchaseId: purchase.purchaseId })
+  });
+  const checkout = await checkoutResponse.json();
+  if (!checkoutResponse.ok || !checkout.url) throw new Error(checkout.error || "Could not start secure checkout.");
+  window.location.assign(checkout.url);
 }
+
+async function getPaintedTextureHashes() {
+  const hashes = {};
+  for (const [meshId, meshData] of Object.entries(meshTextureData)) {
+    for (const [textureName, textureData] of Object.entries(meshData.textures || {})) {
+      if (!textureData.canvas) continue;
+      const blob = await new Promise(resolve => textureData.canvas.toBlob(resolve, "image/png"));
+      if (!blob) continue;
+      const digest = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
+      const fingerprint = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
+      hashes[`${meshId}:${textureName}`] = fingerprint;
+    }
+  }
+  return hashes;
+}
+
 window.handleExport = handleExport;
 
 
-async function exportFullCharacter(format) {
-  if (format === "fbx") {
-    await exportAsFBX();
-  } else {
-    await exportAsGLTF(format, true);
-  }
-}
-
 async function exportAnimationOnly(format) {
-  if (format === "fbx") {
-    await exportAnimationAsFBX();
-  } else {
-    await exportAnimationAsGLTF(format);
-  }
+  return exportAnimationAsGLTF(format);
 }
-
-async function exportAsGLTF(format, includeModel = true) {
+async function exportAsGLTF(format, includeModel = true, shouldDownload = true) {
   return new Promise(async (resolve, reject) => {
     const exporter = new GLTFExporter();
-
-
-    const tier = await getUserSubscriptionTier();
-    const includeBlendShapes = hasBlendShapeExportAccess(tier);
-
-
-    let modelToExport = currentModel;
-
-    if (!includeBlendShapes) {
-
-      console.log('🔒 Free tier: Baking blend shapes into mesh');
-      modelToExport = bakeBlendShapesIntoMesh(currentModel);
-
-      showToast('Exporting with baked blend shapes (Free plan)', 2000);
-    } else {
-
-      console.log('✅ Premium/Studio tier: Including blend shapes');
-
-
-      currentModel.traverse(obj => {
-        if (obj.isSkinnedMesh && obj.morphTargetInfluences) {
-          obj.morphTargetInfluences = obj.morphTargetInfluences.map(v => v);
-        }
-      });
-    }
-
+    const modelToExport = currentModel;
     const options = {
       binary: format === "glb",
       trs: false,
@@ -1926,19 +1756,8 @@ async function exportAsGLTF(format, includeModel = true) {
             blob = new Blob([JSON.stringify(result, null, 2)], { type: "application/json" });
           }
 
-          downloadBlob(blob, filename);
-
-
-          if (window.posthog) {
-            posthog.capture('character_exported_glb', {
-              format: format,
-              subscription_tier: tier,
-              blend_shapes_included: includeBlendShapes,
-              blend_shapes_baked: !includeBlendShapes
-            });
-          }
-
-          resolve();
+          if (shouldDownload) downloadBlob(blob, filename);
+          resolve(blob);
         } catch (err) {
           reject(err);
         }
@@ -2006,281 +1825,222 @@ function exportAnimationAsGLTF(format) {
   });
 }
 
-async function exportAsFBX() {
-  throw new Error("FBX conversion is temporarily disabled.");
-  const { data: { session } } = await supabase.auth.getSession();
-
-  if (!session?.access_token) {
-    showToast("Please sign in to export FBX");
-    return;
-  }
-
-  try {
-
-    const tier = await getUserSubscriptionTier();
-    const includeBlendShapes = hasBlendShapeExportAccess(tier);
-
-    if (!includeBlendShapes) {
-      showToast("Preparing FBX export (blend shapes will be baked)...");
-    } else {
-      showToast("Preparing FBX export...");
-    }
-
-
-    const glbBlob = await new Promise((resolve, reject) => {
-      if (!currentModel) {
-        reject(new Error("No model loaded"));
-        return;
-      }
-
-      const exporter = new GLTFExporter();
-
-
-      let modelToExport = currentModel;
-
-      if (!includeBlendShapes) {
-
-        console.log('🔒 Free tier: Baking blend shapes for FBX export');
-        modelToExport = bakeBlendShapesIntoMesh(currentModel);
-      } else {
-
-        console.log('✅ Premium/Studio tier: Including blend shapes in FBX');
-      }
-
-      const options = {
-        binary: true,
-        animations: mixer && mixer._actions ? Array.from(mixer._actions).map(a => a._clip) : [],
-        maxTextureSize: 4096
-      };
-
-      exporter.parse(
-        modelToExport,
-        (result) => {
-          resolve(new Blob([result], { type: 'application/octet-stream' }));
-        },
-        (error) => reject(error),
-        options
-      );
-    });
-
-    console.log(`GLB prepared: ${(glbBlob.size / 1024).toFixed(2)} KB`);
-
-
-    showToast("Converting to FBX (this may take 30-60 seconds)...");
-
-    const formData = new FormData();
-    formData.append('file', glbBlob, 'character.glb');
-
-    const response = await fetch(`${WORKER_URL}/convert-to-fbx`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`
-      },
-      body: formData
-    });
-
-    if (!response.ok) {
-      let errorData;
-      try {
-        errorData = await response.json();
-        console.error('Worker error response:', errorData);
-
-        if (errorData.creditRefunded) {
-          showToast(`Export failed: ${errorData.error || 'Unknown error'}. Credit refunded.`, 4000);
-        } else {
-          showToast(`Export failed: ${errorData.error || 'Unknown error'}`, 3000);
-        }
-      } catch (e) {
-        console.error('Could not parse error:', e);
-        showToast('Export failed - server error');
-      }
-      return;
-    }
-
-
-    const textureCount = response.headers.get('X-Textures-Count');
-    const fbxSize = response.headers.get('X-FBX-Size');
-
-    console.log(`FBX exported: ${fbxSize ? (parseInt(fbxSize) / 1024).toFixed(2) + ' KB' : 'unknown size'}`);
-    console.log(`Textures included: ${textureCount || '0'}`);
-
-
-    const zipBlob = await response.blob();
-    const filename = `character_${Date.now()}_fbx.zip`;
-    downloadBlob(zipBlob, filename);
-
-
-    let message = textureCount > 0
-      ? `FBX exported! ${textureCount} texture${textureCount > 1 ? 's' : ''} included.`
-      : "FBX exported successfully!";
-
-    if (!includeBlendShapes) {
-      message += " (Blend shapes baked - upgrade to Premium for editable blend shapes)";
-    }
-
-    showToast(message, 5000);
-
-
-    if (window.posthog) {
-      posthog.capture('character_exported_fbx', {
-        subscription_tier: tier,
-        blend_shapes_included: includeBlendShapes,
-        blend_shapes_baked: !includeBlendShapes,
-        texture_count: textureCount
-      });
-    }
-
-
-    const { data: userData } = await supabase
-      .from('users')
-      .select('credits')
-      .eq('id', session.user.id)
-      .single();
-
-    if (userData) {
-      const creditsEl = document.getElementById('credits-count');
-      if (creditsEl) creditsEl.textContent = userData.credits;
-    }
-
-  } catch (error) {
-    console.error('FBX export error:', error);
-
-    if (error.message?.includes('creditRefunded')) {
-      showToast("Export failed. Credit refunded.", 3000);
-    } else {
-      showToast("Export failed. Please try again.", 2500);
-    }
-  }
-}
-
-async function exportAnimationAsFBX() {
-  throw new Error("FBX conversion is temporarily disabled.");
-
-  showToast("Animation-only FBX export coming soon!");
-
-  return Promise.resolve();
-}
-
 function downloadBlob(blob, filename) {
   const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
+  const objectUrl = URL.createObjectURL(blob);
+  link.href = objectUrl;
   link.download = filename;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  URL.revokeObjectURL(link.href);
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
 }
+
+async function downloadPurchasedCharacter(purchaseId) {
+  const { data: purchase, error: purchaseError } = await supabase
+    .from("character_purchases")
+    .select("id,character_name,file_path,status")
+    .eq("id", purchaseId)
+    .eq("status", "paid")
+    .single();
+  if (purchaseError || !purchase) throw new Error("This character is not ready to download yet.");
+
+  const safeName = (purchase.character_name || "Morphara Character").replace(/[^a-z0-9_-]+/gi, "_").slice(0, 80);
+  const { data, error } = await supabase.storage
+    .from("character-purchases")
+    .createSignedUrl(purchase.file_path, 60, { download: `${safeName}.glb` });
+  if (error || !data?.signedUrl) throw new Error(error?.message || "Could not create a download link.");
+  window.location.assign(data.signedUrl);
+}
+
+async function openPurchasedCharacters() {
+  const overlay = document.getElementById("purchases-overlay");
+  const list = document.getElementById("purchases-list");
+  if (!overlay || !list) return;
+  overlay.classList.remove("hidden");
+  list.innerHTML = "";
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    list.textContent = "Sign in to view characters you have purchased.";
+    document.getElementById("auth-overlay")?.classList.remove("hidden");
+    return;
+  }
+
+  list.textContent = "Loading your characters…";
+  const { data: purchases, error } = await supabase
+    .from("character_purchases")
+    .select("id,character_name,base_mesh_id,amount_cents,currency,created_at,file_path,status")
+    .eq("status", "paid")
+    .order("created_at", { ascending: false });
+  list.innerHTML = "";
+  if (error) {
+    list.textContent = "Your library could not load. Please try again.";
+    console.error("Purchased character library failed:", error);
+    return;
+  }
+  if (!purchases?.length) {
+    list.textContent = "No purchased characters yet. Finished characters you buy will be saved here.";
+    return;
+  }
+
+  purchases.forEach(purchase => {
+    const row = document.createElement("article");
+    row.className = "purchase-item";
+    const detail = document.createElement("div");
+    const name = document.createElement("h3");
+    name.textContent = purchase.character_name || "Customized Character";
+    const date = document.createElement("p");
+    date.textContent = purchase.created_at ? new Date(purchase.created_at).toLocaleDateString() : "Purchased";
+    detail.append(name, date);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "purchase-download-btn";
+    button.textContent = "Download GLB";
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      button.textContent = "Preparing…";
+      try {
+        await downloadPurchasedCharacter(purchase.id);
+      } catch (downloadError) {
+        showToast(downloadError.message, 3500);
+        button.disabled = false;
+        button.textContent = "Download GLB";
+      }
+    });
+    row.append(detail, button);
+    list.appendChild(row);
+  });
+}
+
+let characterPurchaseReturnHandled = false;
+async function handleCharacterPurchaseReturn(session) {
+  if (characterPurchaseReturnHandled) return;
+  const params = new URLSearchParams(window.location.search);
+  const result = params.get("character_purchase");
+  if (!result) return;
+  characterPurchaseReturnHandled = true;
+  const checkoutSessionId = params.get("session_id");
+  window.history.replaceState({}, "", window.location.pathname);
+  if (result === "cancelled") {
+    showToast("Checkout cancelled. Your character is still in the editor.", 3500);
+    return;
+  }
+  if (result !== "success" || !checkoutSessionId || !session) return;
+
+  showToast("Payment received. Saving your character to your library…", 5000);
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const { data: purchase } = await supabase
+      .from("character_purchases")
+      .select("id,status")
+      .eq("stripe_checkout_session_id", checkoutSessionId)
+      .maybeSingle();
+    if (purchase?.status === "paid") {
+      showToast("Character purchased and saved. You can download it again from My Characters.", 5000);
+      await openPurchasedCharacters();
+      return;
+    }
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+  showToast("Payment is being confirmed. Check My Characters in a moment.", 5000);
+}
+
+document.getElementById("close-purchases")?.addEventListener("click", () => {
+  document.getElementById("purchases-overlay")?.classList.add("hidden");
+});
+document.querySelector("#purchases-overlay .overlay-backdrop")?.addEventListener("click", () => {
+  document.getElementById("purchases-overlay")?.classList.add("hidden");
+});
 
 
 
 
 let selectedExportType = null;
 let selectedFormat = null;
+let currentCharacterPriceCents = null;
+let currentCharacterCurrency = "usd";
+
+function displayCharacterPrice() {
+  if (currentCharacterPriceCents == null) return "Price unavailable";
+  return new Intl.NumberFormat(undefined, { style: "currency", currency: currentCharacterCurrency.toUpperCase() }).format(currentCharacterPriceCents / 100);
+}
+
+async function refreshCharacterPrice() {
+  const priceLabel = document.getElementById("full-price");
+  currentCharacterPriceCents = null;
+  if (priceLabel) priceLabel.textContent = "Loading price…";
+  if (!currentBaseMesh) return;
+  try {
+    const response = await fetch(`${WORKER_URL}/character-price?baseMeshId=${encodeURIComponent(currentBaseMesh.id)}`);
+    const data = await response.json();
+    if (!response.ok || !Number.isSafeInteger(data.amountCents) || data.amountCents < 50) throw new Error(data.error || "Price unavailable.");
+    currentCharacterPriceCents = data.amountCents;
+    currentCharacterCurrency = data.currency || "usd";
+    if (priceLabel) priceLabel.textContent = displayCharacterPrice();
+  } catch (error) {
+    console.error("Could not load character price:", error);
+    if (priceLabel) priceLabel.textContent = "Price unavailable";
+  }
+  updateExportButton();
+}
 
 window.selectExportType = function(type, cardElement) {
+  if (!['full', 'animation'].includes(type)) return;
   selectedExportType = type;
   document.querySelectorAll('.export-type-card').forEach(card => {
-    card.style.borderColor = 'transparent';
+    const selected = card === cardElement;
+    card.classList.toggle('selected', selected);
+    card.setAttribute('aria-pressed', String(selected));
   });
-  document.querySelectorAll('.export-type-card').forEach(card => { card.classList.toggle('selected', card === cardElement); card.setAttribute('aria-pressed', String(card === cardElement)); });
-  const cost = type === 'full' ? (currentBaseMesh?.priceCredits ?? 1) : 0;
-  document.getElementById('full-cost').textContent = cost;
+  if (type === "full") {
+    selectedFormat = "glb";
+    document.querySelectorAll('.format-btn').forEach(button => {
+      const selected = button.dataset.format === "glb";
+      button.classList.toggle("selected", selected);
+      button.setAttribute("aria-pressed", String(selected));
+    });
+  }
   updateExportButton();
 };
 
-window.selectFormat = async function(format, buttonElement) {
-  if (format === 'fbx' || buttonElement?.disabled) { showToast('FBX conversion is temporarily disabled.'); return; }
+window.selectFormat = function(format, buttonElement) {
+  if (format === 'fbx' || buttonElement?.disabled) {
+    showToast('FBX conversion is temporarily disabled.');
+    return;
+  }
   if (!['glb', 'gltf'].includes(format)) return;
-  document.querySelectorAll('.format-btn').forEach(button => { button.classList.toggle('selected', button === buttonElement); button.setAttribute('aria-pressed', String(button === buttonElement)); });
-  console.log('selectFormat called with:', format, 'button:', buttonElement);
-
-
-  const clickedButton = buttonElement;
-
-
-  if (format === 'fbx') {
-
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
-      showToast("Please sign in to export FBX");
-      return;
-    }
-
-    try {
-      const planResponse = await fetch(`${WORKER_URL}/check-plan`, {
-        headers: { 'Authorization': `Bearer ${session.access_token}` }
-      });
-
-      if (planResponse.ok) {
-        const planData = await planResponse.json();
-        console.log('Plan data:', planData);
-
-        if (!planData.features.fbxExport) {
-          showToast("FBX export not available for Free plan");
-          return;
-        }
-
-        console.log('✅ FBX export allowed for user');
-      } else {
-        showToast("Failed to verify plan");
-        return;
-      }
-    } catch (error) {
-      console.error('Plan check failed:', error);
-      showToast("Failed to verify plan");
-      return;
-    }
+  if (selectedExportType === "full" && format !== "glb") {
+    showToast("Full character purchases are delivered as GLB.");
+    return;
   }
-
-
-  console.log('Setting selectedFormat to:', format);
   selectedFormat = format;
-
-
-  document.querySelectorAll('.format-btn').forEach(btn => {
-    btn.style.borderColor = 'transparent';
-    btn.style.background = '#2a2a2a';
+  document.querySelectorAll('.format-btn').forEach(button => {
+    const selected = button === buttonElement;
+    button.classList.toggle('selected', selected);
+    button.setAttribute('aria-pressed', String(selected));
   });
-
-
-  if (clickedButton) {
-    clickedButton.style.borderColor = '#6c63ff';
-    clickedButton.style.background = '#3a3a3a';
-    console.log('✅ Button highlighted');
-  } else {
-    console.warn('⚠️ No button reference');
-  }
-
-
   updateExportButton();
-  console.log('✅ Export button updated');
 };
 
 function updateExportButton() {
   const btn = document.getElementById('final-export-btn');
   if (!btn) return;
-
-  if (selectedExportType && selectedFormat) {
-    btn.disabled = false;
-    btn.style.opacity = '1';
-    btn.style.cursor = 'pointer';
-    const typeLabel = selectedExportType === 'full' ? 'Full Character' : 'Animation Only';
-    const formatLabel = selectedFormat.toUpperCase();
-    const cost = selectedExportType === 'full' ? (currentBaseMesh?.priceCredits ?? 1) : 0;
-    const costText = cost > 0 ? ` (${cost} Credit${cost > 1 ? 's' : ''})` : ' (FREE)';
-    btn.textContent = `Export ${typeLabel} as ${formatLabel}${costText}`;
-    btn.onclick = () => handleExport(selectedExportType, selectedFormat);
-  } else {
-    btn.disabled = true;
-    btn.style.opacity = '0.5';
-    btn.style.cursor = 'not-allowed';
-    btn.textContent = 'Select options above';
+  const ready = selectedExportType && selectedFormat && (selectedExportType !== "full" || currentCharacterPriceCents != null);
+  btn.disabled = !ready;
+  btn.style.opacity = ready ? '1' : '0.5';
+  btn.style.cursor = ready ? 'pointer' : 'not-allowed';
+  if (!ready) {
+    btn.textContent = selectedExportType === "full" && currentCharacterPriceCents == null ? "Loading character price…" : "Select options above";
     btn.onclick = null;
+    return;
   }
+  if (selectedExportType === "full") {
+    btn.textContent = `Buy Full Character · ${displayCharacterPrice()}`;
+  } else {
+    btn.textContent = `Download Free Animation · ${selectedFormat.toUpperCase()}`;
+  }
+  btn.onclick = () => handleExport(selectedExportType, selectedFormat);
 }
-
-
 function animate() {
   requestAnimationFrame(animate);
 
@@ -2299,31 +2059,6 @@ const materialTargetsContainer = document.getElementById("material-targets");
 async function applyTexturePreset(preset) {
   const target = materialTargets[activeMaterialTarget];
   if (!target) return;
-
-
-  if (preset.isPremium) {
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session) {
-      showToast("Premium texture - Login required");
-      return;
-    }
-
-
-    const { data: userCredits } = await supabase
-      .from("user_credits")
-      .select("plan")
-      .eq("user_id", session.user.id)
-      .single();
-
-    const userPlan = userCredits?.plan || "free";
-
-    if (userPlan !== "premium" && userPlan !== "studio") {
-      showToast("Premium texture - Upgrade to Premium or Studio");
-
-      return;
-    }
-  }
 
   target.materialState.texture = preset;
 
@@ -2566,27 +2301,6 @@ function buildTextureGrid() {
     const item = document.createElement("div");
     item.className = "texture-item";
     item.title = preset.label;
-
-
-    if (preset.isPremium) {
-      const badge = document.createElement("div");
-      badge.className = "premium-badge";
-      badge.innerHTML = "⭐";
-      badge.style.cssText = `
-        position: absolute;
-        top: 4px;
-        right: 4px;
-        background: linear-gradient(135deg, #ffd700, #ff8c00);
-        color: #000;
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-size: 10px;
-        font-weight: bold;
-        z-index: 1;
-        pointer-events: none;
-      `;
-      item.appendChild(badge);
-    }
 
 
     if (preset.r2Key) {
@@ -3481,31 +3195,25 @@ uvOpacitySlider.oninput = e => {
 
 
 const userBtn = document.getElementById("user-btn");
-const creditsBtn = document.getElementById("credits-btn");
-
 const userMenu = document.getElementById("user-menu");
-const creditsMenu = document.getElementById("credits-menu");
+const purchasesBtn = document.getElementById("purchases-btn");
 
 userBtn.onclick = (e) => {
   e.stopPropagation();
   userMenu.classList.toggle("hidden");
-  creditsMenu.classList.add("hidden");
 };
 
-creditsBtn.onclick = (e) => {
+purchasesBtn.onclick = (e) => {
   e.stopPropagation();
-  creditsMenu.classList.toggle("hidden");
   userMenu.classList.add("hidden");
+  openPurchasedCharacters();
 };
 
 document.addEventListener("click", () => {
   userMenu.classList.add("hidden");
-  creditsMenu.classList.add("hidden");
 });
 
-[userMenu, creditsMenu].forEach(menu => {
-  menu.addEventListener("click", e => e.stopPropagation());
-});
+userMenu.addEventListener("click", e => e.stopPropagation());
 
 
 
@@ -3685,7 +3393,7 @@ settingsOverlay?.addEventListener("click", (e) => {
 
 
 document.getElementById("cancel-subscription-btn")?.addEventListener("click", async () => {
-  if (!confirm("Are you sure you want to cancel your subscription? You'll lose access to Premium features at the end of your billing period.")) {
+  if (!confirm("Cancel your existing Morphara subscription? You will keep its current access until the billing period ends.")) {
     return;
   }
 
@@ -3774,47 +3482,30 @@ document.getElementById("delete-account-btn")?.addEventListener("click", async (
 
 supabase.auth.onAuthStateChange((event, session) => {
   updateUserMenu(session ?? null);
+  if (session && !document.getElementById("purchases-overlay")?.classList.contains("hidden")) {
+    openPurchasedCharacters();
+  }
 });
 
 
 
 
 async function initializeTexturePainterV2() {
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      const response = await fetch(`${WORKER_URL}/check-plan`, {
-        headers: { 'Authorization': `Bearer ${session.access_token}` }
-      });
-      const data = await response.json();
-      const plan = data.plan || 'free';
-
-      if (plan === 'studio') {
-        maxAllowedResolution = 4096;
-        document.querySelector('#texture-resolution-select option[value="2048"]').disabled = false;
-        document.querySelector('#texture-resolution-select option[value="4096"]').disabled = false;
-      } else if (plan === 'premium') {
-        maxAllowedResolution = 2048;
-        document.querySelector('#texture-resolution-select option[value="2048"]').disabled = false;
-      } else {
-        maxAllowedResolution = 1024;
-        document.getElementById('resolution-upgrade-hint').style.display = 'block';
-      }
-    }
-  } catch (err) {
-    console.error('Failed to check plan:', err);
-  }
-
+  maxAllowedResolution = 4096;
+  document.querySelectorAll('#texture-resolution-select option').forEach(option => {
+    option.disabled = false;
+  });
+  const hint = document.getElementById('resolution-upgrade-hint');
+  if (hint) hint.style.display = 'none';
   setupTexturePainterListeners();
 }
-
 function setupTexturePainterListeners() {
 
   document.getElementById('texture-resolution-select')
     .addEventListener('change', async (e) => {
       const newRes = parseInt(e.target.value);
       if (!currentPainterMesh) { showToast('No mesh selected'); e.target.value = 1024; return; }
-      if (newRes > maxAllowedResolution) { showToast('Upgrade for higher resolutions'); e.target.value = maxAllowedResolution; return; }
+      if (newRes > maxAllowedResolution) { showToast('Maximum texture size is 4096px.'); e.target.value = maxAllowedResolution; return; }
       if (isPainterMode) { showToast('Exit texture painter before changing resolution'); e.target.value = meshTextureData[currentPainterMesh]?.resolution || 1024; return; }
       await changeTextureResolution(currentPainterMesh, newRes, materialTargets);
       showToast(`Resolution changed to ${newRes}x${newRes}`);
