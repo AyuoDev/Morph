@@ -21,7 +21,10 @@ export function createPreview({
   gltfPath = null,
   animationPath = null,
   baseMeshPath = null,
-  autoRotate = true
+  autoRotate = true,
+  clothingPaths = [],
+  blendShapes = {},
+  colors = {}
 }) {
   const scene = new THREE.Scene();
   scene.background = null;
@@ -76,6 +79,8 @@ export function createPreview({
       gltf => {
         preview.root = gltf.scene;
         scene.add(preview.root);
+        applyBlendShapes(preview.root);
+        applyColor(preview.root, colors.base);
         if (!isClothingPreview && gltf.animations?.length) {
           preview.mixer = new THREE.AnimationMixer(preview.root);
           const action = preview.mixer.clipAction(gltf.animations[0]);
@@ -83,7 +88,29 @@ export function createPreview({
           action.play();
           preview.mixer.update(0);
         }
-        frameObject(preview.root);
+        Promise.all(clothingPaths.map(entry => loader.loadAsync(entry.path || entry).then(gltf => ({ gltf, entry })).catch(error => {
+          console.warn("Preset clothing preview skipped:", error);
+          return null;
+        }))).then(clothingModels => {
+          if (!preview.root) return;
+          const characterMesh = findSkinnedMesh(preview.root);
+          for (const clothingModel of clothingModels) {
+            if (!clothingModel) continue;
+            const clothingRoot = clothingModel.gltf.scene;
+            if (characterMesh) {
+              clothingRoot.traverse(object => {
+                if (object.isSkinnedMesh) {
+                  object.bind(characterMesh.skeleton, characterMesh.bindMatrix.clone());
+                  object.frustumCulled = false;
+                }
+              });
+            }
+            preview.root.add(clothingRoot);
+            applyBlendShapes(clothingRoot);
+            applyColor(clothingRoot, colors[clothingModel.entry.target]);
+          }
+          frameObject(preview.root);
+        });
       },
       undefined, silentErr("gltf")
     );
@@ -106,6 +133,37 @@ export function createPreview({
   preview.autoRotate    = isClothingPreview || autoRotate;
   preview.rotationSpeed = isClothingPreview ? 0.006 : 0.002 + Math.random() * 0.003;
   registerPreview(preview);
+
+  function findSkinnedMesh(root) {
+    let result = null;
+    root.traverse(object => {
+      if (!result && object.isSkinnedMesh) result = object;
+    });
+    return result;
+  }
+
+  function applyBlendShapes(root) {
+    root.traverse(mesh => {
+      if (!mesh.morphTargetDictionary || !mesh.morphTargetInfluences) return;
+      Object.entries(blendShapes || {}).forEach(([name, value]) => {
+        const index = mesh.morphTargetDictionary[name];
+        if (index !== undefined) mesh.morphTargetInfluences[index] = value;
+      });
+    });
+  }
+
+  function applyColor(root, colorValue) {
+    if (!colorValue) return;
+    root.traverse(mesh => {
+      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      materials.forEach(material => {
+        if (material?.color) {
+          material.color.set(colorValue);
+          material.needsUpdate = true;
+        }
+      });
+    });
+  }
 
   return {
     dispose() {

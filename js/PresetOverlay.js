@@ -31,6 +31,8 @@ export class PresetOverlay {
     this.currentPage = 0;
     this.presetsPerPage = 8;
     this.activePreviews = new Map();
+    this.previewUrlPromises = new Map();
+    this.previewGeneration = 0;
 
     this.overlay = null;
     this.carousel = null;
@@ -239,60 +241,83 @@ export class PresetOverlay {
     return card;
   }
 
-createPresetPreview(container, preset) {
-
+async createPresetPreview(container, preset) {
     const previewContainer = document.createElement('div');
     previewContainer.className = 'preview-canvas';
+    previewContainer.setAttribute('role', 'img');
+    previewContainer.setAttribute('aria-label', `${preset.name} 3D preview`);
+    previewContainer.innerHTML = '<div class="preset-preview-loading">Loading 3D preview…</div>';
     container.appendChild(previewContainer);
+    const generation = this.previewGeneration;
+    const meshKey = preset.config?.baseMesh?.r2Key;
+    if (!meshKey) {
+      this.renderPresetThumbnail(previewContainer, preset);
+      return;
+    }
 
+    try {
+      const gltfPath = await this.getPreviewAssetUrl('basemesh', meshKey);
+      const clothingEntries = Object.entries(preset.config?.clothing || {})
+        .filter(([, item]) => item?.r2Key);
+      const clothingPaths = await Promise.all(clothingEntries.map(async ([category, item]) => {
+        try {
+          return {
+            path: await this.getPreviewAssetUrl(category, item.r2Key),
+            target: item.id || category
+          };
+        } catch (error) {
+          console.warn(`Preset clothing preview unavailable for ${preset.name}:`, error);
+          return null;
+        }
+      }));
+      if (generation !== this.previewGeneration || !previewContainer.isConnected) return;
+      previewContainer.replaceChildren();
+      const preview = createPreview({
+        container: previewContainer,
+        gltfPath,
+        autoRotate: true,
+        clothingPaths: clothingPaths.filter(Boolean),
+        blendShapes: preset.config?.blendShapes || {},
+        colors: preset.config?.colors || {}
+      });
+      this.activePreviews.set(previewContainer, preview);
+    } catch (error) {
+      console.warn(`Preset preview unavailable for ${preset.name}:`, error);
+      if (generation === this.previewGeneration && previewContainer.isConnected) {
+        this.renderPresetThumbnail(previewContainer, preset);
+      }
+    }
+  }
 
-    const categoryGradients = {
-      'casual': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      'sports': 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-      'professional': 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-      'scifi': 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-      'fantasy': 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-      'urban': 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
-      'creative': 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-      'tactical': 'linear-gradient(135deg, #ff9a56 0%, #ff6a00 100%)',
-      'gaming': 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)'
-    };
+  getPreviewAssetUrl(bucket, filename) {
+    const key = `${bucket}:${filename}`;
+    let urlPromise = this.previewUrlPromises.get(key);
+    if (!urlPromise) {
+      urlPromise = this.getAssetUrl(bucket, filename);
+      this.previewUrlPromises.set(key, urlPromise);
+      urlPromise.catch(() => {
+        if (this.previewUrlPromises.get(key) === urlPromise) {
+          this.previewUrlPromises.delete(key);
+        }
+      });
+    }
+    return urlPromise;
+  }
 
-    const gradient = categoryGradients[preset.category] || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-    const categoryLabel = (preset.category || 'Character').toUpperCase();
-
-    previewContainer.innerHTML = `
-      <div style="
-        width: 100%;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        background: ${gradient};
-        border-radius: 8px;
-        color: white;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-      ">
-        <div style="
-          font-size: 52px;
-          margin-bottom: 8px;
-          filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
-        ">👤</div>
-        <div style="
-          font-size: 11px;
-          opacity: 0.95;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 1.5px;
-        ">${categoryLabel}</div>
-        <div style="
-          font-size: 9px;
-          opacity: 0.8;
-          margin-top: 4px;
-        ">Click to load</div>
-      </div>
-    `;
+  renderPresetThumbnail(container, preset) {
+    container.replaceChildren();
+    if (preset.thumbnail) {
+      const image = document.createElement('img');
+      image.src = preset.thumbnail;
+      image.alt = `${preset.name} preview`;
+      image.loading = 'lazy';
+      container.appendChild(image);
+    } else {
+      const fallback = document.createElement('div');
+      fallback.className = 'preset-no-preview';
+      fallback.textContent = 'Preview unavailable';
+      container.appendChild(fallback);
+    }
   }
 
 
@@ -414,11 +439,8 @@ createPresetPreview(container, preset) {
 
 
   cleanupPreviews() {
-    this.activePreviews.forEach((preview, container) => {
-      if (preview && preview.cleanup) {
-        preview.cleanup();
-      }
-    });
+    this.previewGeneration++;
+    this.activePreviews.forEach(preview => preview?.dispose?.());
     this.activePreviews.clear();
   }
 

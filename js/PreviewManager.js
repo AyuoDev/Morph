@@ -84,6 +84,36 @@ function isElementVisible(element) {
   return true;
 }
 
+function getVisiblePreviewRect(element, rect, canvasRect) {
+  const visible = {
+    left: Math.max(rect.left, canvasRect.left),
+    top: Math.max(rect.top, canvasRect.top),
+    right: Math.min(rect.right, canvasRect.right),
+    bottom: Math.min(rect.bottom, canvasRect.bottom)
+  };
+
+  let parent = element.parentElement;
+  while (parent && parent !== document.body) {
+    const style = window.getComputedStyle(parent);
+    const clipsX = /hidden|clip|auto|scroll/.test(style.overflowX);
+    const clipsY = /hidden|clip|auto|scroll/.test(style.overflowY);
+    if (clipsX || clipsY) {
+      const bounds = parent.getBoundingClientRect();
+      if (clipsX) {
+        visible.left = Math.max(visible.left, bounds.left);
+        visible.right = Math.min(visible.right, bounds.right);
+      }
+      if (clipsY) {
+        visible.top = Math.max(visible.top, bounds.top);
+        visible.bottom = Math.min(visible.bottom, bounds.bottom);
+      }
+    }
+    parent = parent.parentElement;
+  }
+
+  return visible;
+}
+
 function animate() {
   requestAnimationFrame(animate);
 
@@ -93,6 +123,7 @@ function animate() {
   const canvasRect = canvas.getBoundingClientRect();
 
   renderer.setClearColor(0x000000, 0);
+  renderer.setScissor(0, 0, canvasRect.width, canvasRect.height);
   renderer.clear();
 
   previews.forEach(p => {
@@ -115,16 +146,24 @@ function animate() {
       return;
     }
 
+    const clipRect = getVisiblePreviewRect(p.container, rect, canvasRect);
     const width = rect.width;
     const height = rect.height;
 
-    if (width === 0 || height === 0) return;
+    if (width === 0 || height === 0 || clipRect.right <= clipRect.left || clipRect.bottom <= clipRect.top) return;
 
     const left = rect.left - canvasRect.left;
     const bottom = canvasRect.bottom - rect.bottom;
+    const clipLeft = clipRect.left - canvasRect.left;
+    const clipBottom = canvasRect.bottom - clipRect.bottom;
 
     renderer.setViewport(left, bottom, width, height);
-    renderer.setScissor(left, bottom, width, height);
+    renderer.setScissor(
+      clipLeft,
+      clipBottom,
+      clipRect.right - clipRect.left,
+      clipRect.bottom - clipRect.top
+    );
 
     renderer.clearDepth();
 
