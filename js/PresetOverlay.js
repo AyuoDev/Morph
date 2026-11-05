@@ -4,7 +4,7 @@
 
 
 
-import { createPreview } from "./PreviewRenderer.js";
+import { createPreview } from "./PreviewRenderer.js?v=20261105-preview-fix-2";
 import * as THREE from "three";
 
 export class PresetOverlay {

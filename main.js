@@ -4,10 +4,10 @@ import { OrbitControls } from "https://esm.sh/three@0.158.0/examples/jsm/control
 import { GLTFExporter } from "https://esm.sh/three@0.158.0/examples/jsm/exporters/GLTFExporter.js";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-import { PresetOverlay } from "./js/PresetOverlay.js";
+import { PresetOverlay } from "./js/PresetOverlay.js?v=20261105-preview-fix-2";
 import { PresetSystem } from "./js/PresetSystem.js";
 import { initPlansOverlayControls } from "./js/Controls.js";
-import { createPreview } from "./js/PreviewRenderer.js";
+import { createPreview } from "./js/PreviewRenderer.js?v=20261105-preview-fix-2";
 import {
   TexturePainter,
   meshTextureData,

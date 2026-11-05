@@ -4,7 +4,7 @@ import {
   getPreviewRenderer,
   registerPreview,
   unregisterPreview
-} from "./PreviewManager.js";
+} from "./PreviewManager.js?v=20261105-preview-fix-2";
 
 function disposeObject(object) {
   object.traverse(o => {

@@ -17,14 +17,14 @@ export function getPreviewRenderer() {
     renderer.setSize(window.innerWidth, window.innerHeight, false);
     renderer.setScissorTest(true);
 
-
-renderer.domElement.style.position = "fixed";
-renderer.domElement.style.top = "0";
-renderer.domElement.style.left = "0";
-renderer.domElement.style.width = "100vw";
-renderer.domElement.style.height = "100vh";
-renderer.domElement.style.pointerEvents = "none";
-renderer.domElement.style.zIndex = "999";
+    renderer.domElement.classList.add("preview-renderer-layer");
+    renderer.domElement.style.position = "fixed";
+    renderer.domElement.style.top = "0";
+    renderer.domElement.style.left = "0";
+    renderer.domElement.style.width = "100vw";
+    renderer.domElement.style.height = "100vh";
+    renderer.domElement.style.pointerEvents = "none";
+    renderer.domElement.style.zIndex = "15";
 
     document.body.appendChild(renderer.domElement);
   }
