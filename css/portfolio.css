@@ -15,3 +15,4 @@
 .converter-promo small{color:var(--muted);font-size:11px}
 .converter-promo>b{font-size:10px;color:#78d7e8;white-space:nowrap}
 @media(max-width:700px){.project-strip{grid-template-columns:1fr}.converter-promo{gap:11px;padding:11px}.converter-promo img{width:44px;height:44px}.converter-promo>b{font-size:9px}}
+.creator-social-links{display:flex;flex-wrap:wrap;gap:10px 24px;margin:8px 0 22px}.creator-social-links .text-link{margin:0}

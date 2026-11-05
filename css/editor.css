@@ -6,3 +6,4 @@
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
 .preview-renderer-layer{z-index:15!important}
+.editor-status .discord-help-link{color:#c4b3f4;font-weight:600;white-space:nowrap}.editor-status .discord-help-link:hover{color:#e2d8ff;text-decoration:underline}@media(max-width:900px){.editor-status>span:last-of-type{display:none}}@media(max-width:700px){.editor-status{gap:8px}.editor-status .discord-help-link{font-size:8px}}
