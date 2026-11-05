@@ -1,0 +1,5 @@
+Morphara FBX Converter includes the following open-source software:
+
+libassimp 0.4.1 is licensed under Apache License 2.0. Its Assimp engine is licensed under the 3-clause BSD license. The upstream distribution notice is included in LIBASSIMP-NOTICE.txt. License texts are included in LIBASSIMP-APACHE-LICENSE.txt and ASSIMP-LICENSE.txt.
+
+fflate 0.8.3 is licensed under the MIT license. Its license text is included in FFLATE-MIT-LICENSE.txt.

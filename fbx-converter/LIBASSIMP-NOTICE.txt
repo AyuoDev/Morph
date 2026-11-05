@@ -1,0 +1,36 @@
+libassimp
+Copyright 2026 Richard Fontein
+
+This product is built from the Open Asset Import Library (assimp), copyright
+2006 the assimp team, licensed under the 3-clause BSD license. The engine is
+consumed as the `taucad/assimp` fork through the `assimp/` git submodule; its
+license text is retained at assimp/LICENSE.
+
+The engine links the following third-party projects, fetched at configure time
+by assimp's own CMake build. Each project's license text is retained in its
+fetched source tree:
+
+- LightUSD (lighttransport/LightUSD, consumed as the taucad/tinyusdz fork),
+  Apache License 2.0 — USD, USDA, USDC, USDZ and MaterialX support. Copyright
+  2020-2023 Syoyo Fujita and 2024-present Light Transport Entertainment Inc.
+  The third-party code it bundles is listed in its LICENSE.3rdparty.
+- engine_web-ifc (ThatOpen/engine_web-ifc), Mozilla Public License 2.0 — IFC
+  support. Its source is fetched unmodified apart from a C++20 compatibility
+  patch retained beside the engine; obtain it from
+  https://github.com/ThatOpen/engine_web-ifc.
+- fast_float, licensed under Apache-2.0, MIT, or the Boost Software License.
+- tinynurbs (QuimMoya/tinynurbs), 3-clause BSD license.
+- glm, MIT license (the Happy Bunny variant).
+- CDT (artem-ogre/CDT), Mozilla Public License 2.0.
+- spdlog, MIT license.
+- stduuid, MIT license.
+- lib3mf (3MFConsortium/lib3mf), 2-clause BSD license — 3MF import and export.
+
+The engine also bundles third-party sources under assimp/contrib/, each with
+its own license text in place: Open3DGC, USD-Fileformat-plugins, clipper,
+draco, earcut-hpp, googletest, meshlab, openddlparser, poly2tri, pugixml, pxr,
+rapidjson, stb, unzip, utf8cpp, zip, and zlib.
+
+libassimp is a cleanroom implementation. kovacsv/assimpjs is credited as prior
+art for demonstrating that assimp compiles and runs usefully under Emscripten;
+no code from it is copied or derived here.

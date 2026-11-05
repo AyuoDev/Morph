@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#10121a">
+    <meta name="description" content="Convert GLB and GLTF models to FBX in your browser. Your model stays on your device.">
+    <title>GLB to FBX Converter | Morphara</title>
+    <script type="module" crossorigin src="./assets/index-BcmGy4VK.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-DofIV0a1.css">
+  </head>
+  <body>
+    <main class="page-shell">
+      <header class="topbar">
+        <a class="brand" href="https://morphara.com/" aria-label="Morphara home">
+          <span class="brand-mark" aria-hidden="true">M</span>
+          <span>MORPHARA <small>3D TOOLS</small></span>
+        </a>
+        <a class="top-link" href="https://morphara.com/Morphara.html">Open Character Creator <span aria-hidden="true">↗</span></a>
+      </header>
+
+      <section class="hero">
+        <p class="eyebrow"><span></span> BROWSER-BASED CONVERSION</p>
+        <h1>GLB to <em>FBX</em></h1>
+        <p class="intro">Convert a 3D model on your device. Your files stay in this browser and are never sent to Morphara.</p>
+        <div class="privacy-line"><span aria-hidden="true">⌑</span><span>Private by design</span><b>·</b><span>No account</span><b>·</b><span>Free to use</span></div>
+      </section>
+
+      <section class="converter-card" aria-labelledby="converter-title">
+        <h2 id="converter-title" class="visually-hidden">Choose a model to convert</h2>
+        <input id="model-files" class="visually-hidden" type="file" accept=".glb,.gltf,.bin,.png,.jpg,.jpeg,.webp,.ktx2" multiple>
+        <input id="model-folder" class="visually-hidden" type="file" accept=".glb,.gltf,.bin,.png,.jpg,.jpeg,.webp,.ktx2" multiple webkitdirectory>
+        <div id="drop-zone" class="drop-zone" role="button" tabindex="0" aria-label="Choose or drop a GLB or GLTF model">
+          <div class="upload-icon" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><path d="M24 31V10m0 0-8 8m8-8 8 8M9 29v10h30V29" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h3>Drop your model here</h3>
+          <p>or <button id="browse-files" class="text-button" type="button">choose files</button> from your device</p>
+          <div class="file-types"><span>GLB</span><span>GLTF</span><span>Companion textures supported</span></div>
+        </div>
+        <div class="pick-folder-row"><span>For GLTF files with separate textures or .bin data,</span><button id="browse-folder" class="text-button" type="button">choose the whole model folder</button></div>
+        <p class="engine-note">First use downloads about 15 MB of conversion software. Your model file is processed locally.</p>
+        <section id="selection" class="selection hidden" aria-live="polite">
+          <div class="selection-heading"><span>SELECTED FILES</span><button id="clear-files" class="text-button muted" type="button">Remove all</button></div>
+          <ul id="file-list" class="file-list"></ul>
+          <div class="convert-row"><p id="selection-summary"></p><button id="convert-button" class="convert-button" type="button" disabled>Convert to FBX <span aria-hidden="true">→</span></button></div>
+        </section>
+        <section id="progress-panel" class="progress-panel hidden" aria-live="polite">
+          <div class="progress-head"><span id="progress-title">Preparing converter</span><span id="progress-percent"></span></div>
+          <div class="progress-track"><span id="progress-fill"></span></div>
+          <p id="progress-detail">The conversion engine loads in your browser the first time you use it.</p>
+          <button id="cancel-button" class="text-button muted" type="button">Cancel</button>
+        </section>
+        <div id="result-panel" class="result-panel hidden" aria-live="polite">
+          <div class="result-icon" aria-hidden="true">✓</div>
+          <div class="result-copy"><strong>FBX package ready</strong><span id="result-detail"></span></div>
+          <button id="download-button" class="download-button" type="button">Download ZIP <span aria-hidden="true">↓</span></button>
+        </div>
+        <p id="error-message" class="error-message hidden" role="alert"></p>
+      </section>
+
+      <section class="steps" aria-label="How conversion works">
+        <article><span>01</span><div><h2>Choose your model</h2><p>Select a GLB, or a GLTF file with its referenced data and textures.</p></div></article>
+        <article><span>02</span><div><h2>Convert on this device</h2><p>A WebAssembly engine processes the files locally in a background browser worker.</p></div></article>
+        <article><span>03</span><div><h2>Save the package</h2><p>Download the FBX and any generated texture files together in a ZIP.</p></div></article>
+      </section>
+
+      <aside class="note-card">
+        <span class="note-icon" aria-hidden="true">i</span>
+        <div><h2>About FBX compatibility</h2><p>FBX export is experimental in the conversion engine. Materials, rigs, animations, and morph targets may differ from the source or need adjustment in Unity, Unreal, Blender, or another 3D app. Review the exported model before using it in production.</p></div>
+      </aside>
+
+      <footer class="footer"><span>Files are processed locally. Only the converter engine is downloaded.</span><span><a href="THIRD-PARTY-NOTICES.txt">Open-source notices</a> · <a href="https://morphara.com/">Morphara.com</a></span></footer>
+    </main>
+  </body>
+</html>
