@@ -464,8 +464,17 @@
     <div id="purchases-list" class="purchases-list" aria-live="polite"></div>
   </section>
 </div>
+<div id="character-viewer-overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="character-viewer-title">
+  <section class="character-viewer-panel">
+    <header class="purchases-header">
+      <h2 id="character-viewer-title">Saved Character</h2>
+      <button id="close-character-viewer" class="icon-btn" type="button" aria-label="Close character preview">✕</button>
+    </header>
+    <div id="character-viewer-canvas"></div>
+  </section>
+</div>
 <div id="toast" class="toast hidden"></div>
-<script type="module" src="./main.js?v=20261105-character-purchases"></script>
+<script type="module" src="./main.js?v=20261105-account-character-library"></script>
 
 
 
@@ -547,14 +556,24 @@
       <div class="settings-section">
         <h3>Account Information</h3>
         <p><strong>Email:</strong> <span id="settings-email">-</span></p>
-        <p><strong>Plan:</strong> <span id="settings-plan">-</span></p>
+        <p><strong>Email status:</strong> <span id="settings-verified">-</span></p>
+        <p><strong>Member since:</strong> <span id="settings-created">-</span></p>
       </div>
 
+      <div class="settings-section">
+        <h3>Your Characters</h3>
+        <p><strong>Saved characters:</strong> <span id="settings-character-count">-</span></p>
+        <p><strong>Total character purchases:</strong> <span id="settings-total-spent">-</span></p>
+        <button id="settings-library-btn" class="settings-btn-secondary" type="button">Open My Characters</button>
+      </div>
 
-      <div class="settings-section" id="legacy-subscription-section" hidden>
-        <h3>Existing subscription</h3>
-        <p>Subscription sales have ended. Manage or cancel an existing Morphara plan here.</p>
-        <button id="cancel-subscription-btn" class="settings-btn-danger">Cancel Subscription</button>
+      <div class="settings-section">
+        <h3>Security</h3>
+        <label for="settings-new-password">Change password</label>
+        <input id="settings-new-password" type="password" autocomplete="new-password" minlength="8" placeholder="New password">
+        <button id="change-password-btn" class="settings-btn-secondary" type="button">Update Password</button>
+        <p id="settings-password-message" aria-live="polite"></p>
+        <button id="settings-signout-btn" class="settings-btn-secondary" type="button">Sign Out</button>
       </div>
 
 

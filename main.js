@@ -176,21 +176,11 @@ function updateUserMenu(session) {
 
       const emailEl = document.getElementById("settings-email");
       if (emailEl) emailEl.textContent = user.email;
-
-      const legacySubscriptionSection = document.getElementById("legacy-subscription-section");
-      if (legacySubscriptionSection) legacySubscriptionSection.hidden = true;
-      fetch(WORKER_URL + "/get-subscription-info", {
-        headers: { "Authorization": "Bearer " + session.access_token }
-      }).then(r => r.json()).then(data => {
-        if (legacySubscriptionSection) legacySubscriptionSection.hidden = !data.hasSub;
-      }).catch(() => {});
-      fetch(WORKER_URL + "/check-plan", {
-        headers: { "Authorization": "Bearer " + session.access_token }
-      }).then(r => r.json()).then(data => {
-        const names = { free: "Free", premium: "Premium", studio: "Studio" };
-        const planEl = document.getElementById("settings-plan");
-        if (planEl) planEl.textContent = names[data.plan] || "Free";
-      }).catch(() => {});
+      const createdEl = document.getElementById("settings-created");
+      if (createdEl) createdEl.textContent = user.created_at ? new Date(user.created_at).toLocaleDateString() : "-";
+      const verifiedEl = document.getElementById("settings-verified");
+      if (verifiedEl) verifiedEl.textContent = user.email_confirmed_at ? "Verified" : "Pending verification";
+      loadAccountSummary(session);
     });
 
     document.getElementById("my-characters-btn").addEventListener("click", () => {
@@ -210,7 +200,6 @@ function updateUserMenu(session) {
     });
 
 
-    fetchAndDisplayPlan(user.id);
     handleCharacterPurchaseReturn(session);
 
   } else {
@@ -238,43 +227,26 @@ function updateUserMenu(session) {
 }
 
 
-window.fetchAndDisplayPlan = fetchAndDisplayPlan;
-
-
-async function fetchAndDisplayPlan(userId) {
-  let planName  = "free";
-  let planLabel = "FREE";
-
-  try {
-
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      const res  = await fetch(`${WORKER_URL}/check-plan`, {
-        headers: { "Authorization": `Bearer ${session.access_token}` }
-      });
-      const data = await res.json();
-      planName  = data.plan || "free";
-      planLabel = planName.toUpperCase();
-    }
-  } catch(e) {
-    console.warn("fetchAndDisplayPlan failed:", e.message);
+async function loadAccountSummary(session) {
+  const countEl = document.getElementById("settings-character-count");
+  const totalEl = document.getElementById("settings-total-spent");
+  if (!countEl || !totalEl) return;
+  countEl.textContent = "Loading…";
+  totalEl.textContent = "Loading…";
+  const { data, error } = await supabase
+    .from("character_purchases")
+    .select("amount_cents,currency")
+    .eq("user_id", session.user.id)
+    .eq("status", "paid");
+  if (error) {
+    countEl.textContent = "Unavailable";
+    totalEl.textContent = "Unavailable";
+    console.warn("Account purchase summary failed:", error.message);
+    return;
   }
-
-
-  window._currentPlan = planName;
-
-
-  let badge = document.getElementById("plan-badge");
-  if (!badge) {
-    badge = document.createElement("span");
-    badge.id = "plan-badge";
-    document.getElementById("user-btn")?.after(badge);
-  }
-
-  const badgeColors = { free: "#444", premium: "#6c63ff", studio: "#f59e0b" };
-  badge.textContent      = planLabel;
-  badge.style.background = badgeColors[planName] || "#444";
-  badge.style.color      = "#fff";
+  countEl.textContent = String(data?.length || 0);
+  const cents = (data || []).reduce((sum, row) => sum + (Number(row.amount_cents) || 0), 0);
+  totalEl.textContent = new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(cents / 100);
 }
 
 
@@ -1497,9 +1469,18 @@ function unequipAllClothes() {
 
 
 const exportBtn = document.getElementById("export-btn");
+let pendingExportAfterSignIn = false;
 
 if (exportBtn) {
   exportBtn.addEventListener("click", async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      pendingExportAfterSignIn = true;
+      authMode = "login";
+      updateAuthUI();
+      document.getElementById("auth-overlay")?.classList.remove("hidden");
+      return;
+    }
 
     if (window.posthog) {
       posthog.capture('export_panel_opened', {
@@ -1623,6 +1604,16 @@ let exportInProgress = false;
 async function handleExport(type, format) {
   if (format === 'fbx') { showToast('FBX conversion is temporarily disabled. Choose GLB or GLTF.'); return; }
   if (!['glb', 'gltf'].includes(format) || !['full', 'animation'].includes(type)) return;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    pendingExportAfterSignIn = true;
+    authMode = "login";
+    updateAuthUI();
+    document.getElementById("export-panel-overlay")?.classList.add("hidden");
+    document.getElementById("auth-overlay")?.classList.remove("hidden");
+    showToast("Sign in to export your character or animation.");
+    return;
+  }
   if (!currentModel || !currentBaseMesh) { showToast('Choose a character before exporting.'); return; }
   if (type === 'animation' && !activeAction) { showToast('Select an animation before exporting.'); return; }
   if (exportInProgress) return;
@@ -1698,6 +1689,20 @@ async function purchaseCurrentCharacter() {
     .from("character-purchases")
     .upload(purchase.filePath, blob, { contentType: "model/gltf-binary", upsert: false, cacheControl: "3600" });
   if (uploadError) throw new Error(`Could not save your character: ${uploadError.message}`);
+
+  if (purchase.freeCharacter) {
+    const completeResponse = await fetch(`${WORKER_URL}/complete-free-character`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ purchaseId: purchase.purchaseId })
+    });
+    const completed = await completeResponse.json();
+    if (!completeResponse.ok) throw new Error(completed.error || "Could not save your first character.");
+    document.getElementById("export-panel-overlay")?.classList.add("hidden");
+    showToast("Your first character is saved to My Characters.", 4000);
+    await downloadPurchasedCharacter(purchase.purchaseId);
+    return;
+  }
 
   const checkoutResponse = await fetch(`${WORKER_URL}/character-purchase-checkout`, {
     method: "POST",
@@ -1880,7 +1885,7 @@ async function openPurchasedCharacters() {
     return;
   }
   if (!purchases?.length) {
-    list.textContent = "No purchased characters yet. Finished characters you buy will be saved here.";
+    list.textContent = "No saved characters yet. Finished characters will stay here so you can view or download them again.";
     return;
   }
 
@@ -1908,9 +1913,106 @@ async function openPurchasedCharacters() {
         button.textContent = "Download GLB";
       }
     });
-    row.append(detail, button);
+    const viewButton = document.createElement("button");
+    viewButton.type = "button";
+    viewButton.className = "purchase-view-btn";
+    viewButton.textContent = "View";
+    viewButton.addEventListener("click", () => viewPurchasedCharacter(purchase.id));
+    row.append(detail, viewButton, button);
     list.appendChild(row);
   });
+}
+
+async function viewPurchasedCharacter(purchaseId) {
+  const { data: purchase, error } = await supabase
+    .from("character_purchases")
+    .select("file_path,character_name")
+    .eq("id", purchaseId)
+    .eq("status", "paid")
+    .single();
+  if (error || !purchase) { showToast("Could not load this character."); return; }
+  const { data, error: urlError } = await supabase.storage
+    .from("character-purchases")
+    .createSignedUrl(purchase.file_path, 60);
+  if (urlError || !data?.signedUrl) { showToast(urlError?.message || "Could not open this character."); return; }
+  const overlay = document.getElementById("character-viewer-overlay");
+  const canvasHost = document.getElementById("character-viewer-canvas");
+  const title = document.getElementById("character-viewer-title");
+  if (!overlay || !canvasHost) return;
+  title.textContent = purchase.character_name || "Saved Character";
+  overlay.classList.remove("hidden");
+  if (canvasHost._cleanup) canvasHost._cleanup();
+  canvasHost.replaceChildren();
+  const viewerScene = new THREE.Scene();
+  viewerScene.background = new THREE.Color(0x151923);
+  const viewerCamera = new THREE.PerspectiveCamera(40, 1, 0.01, 1000);
+  const viewerRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  viewerRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  viewerRenderer.setSize(canvasHost.clientWidth || 720, canvasHost.clientHeight || 500);
+  canvasHost.appendChild(viewerRenderer.domElement);
+  viewerScene.add(new THREE.HemisphereLight(0xffffff, 0x5c6074, 2));
+  const keyLight = new THREE.DirectionalLight(0xffffff, 2);
+  keyLight.position.set(4, 8, 6);
+  viewerScene.add(keyLight);
+  const viewerControls = new OrbitControls(viewerCamera, viewerRenderer.domElement);
+  viewerControls.enableDamping = true;
+  const loader = new GLTFLoader();
+  let animationFrame = 0;
+  let mixerForViewer = null;
+  let loadedRoot = null;
+  loader.load(data.signedUrl, gltf => {
+    loadedRoot = gltf.scene;
+    viewerScene.add(loadedRoot);
+    const bounds = new THREE.Box3().setFromObject(loadedRoot);
+    const center = bounds.getCenter(new THREE.Vector3());
+    const size = bounds.getSize(new THREE.Vector3());
+    const dimension = Math.max(size.x, size.y, size.z) || 1;
+    loadedRoot.position.sub(center);
+    viewerCamera.position.set(0, dimension * 0.25, dimension * 2.6);
+    viewerCamera.near = dimension / 1000;
+    viewerCamera.far = dimension * 20;
+    viewerCamera.updateProjectionMatrix();
+    viewerControls.target.set(0, 0, 0);
+    viewerControls.update();
+    if (gltf.animations.length) {
+      mixerForViewer = new THREE.AnimationMixer(loadedRoot);
+      mixerForViewer.clipAction(gltf.animations[0]).play();
+    }
+  }, undefined, error => {
+    console.error("Saved character preview failed:", error);
+    showToast("Could not preview this character.");
+  });
+  const clock = new THREE.Clock();
+  const render = () => {
+    animationFrame = requestAnimationFrame(render);
+    mixerForViewer?.update(clock.getDelta());
+    viewerControls.update();
+    viewerRenderer.render(viewerScene, viewerCamera);
+  };
+  render();
+  const resize = () => {
+    const width = canvasHost.clientWidth || 720;
+    const height = canvasHost.clientHeight || 500;
+    viewerCamera.aspect = width / height;
+    viewerCamera.updateProjectionMatrix();
+    viewerRenderer.setSize(width, height);
+  };
+  const resizeObserver = new ResizeObserver(resize);
+  resizeObserver.observe(canvasHost);
+  canvasHost._cleanup = () => {
+    cancelAnimationFrame(animationFrame);
+    resizeObserver.disconnect();
+    viewerControls.dispose();
+    viewerRenderer.dispose();
+    viewerScene.traverse(object => {
+      object.geometry?.dispose();
+      for (const material of (Array.isArray(object.material) ? object.material : [object.material])) {
+        if (!material) continue;
+        for (const value of Object.values(material)) if (value?.isTexture) value.dispose();
+        material.dispose();
+      }
+    });
+  };
 }
 
 let characterPurchaseReturnHandled = false;
@@ -3392,54 +3494,32 @@ settingsOverlay?.addEventListener("click", (e) => {
 });
 
 
-document.getElementById("cancel-subscription-btn")?.addEventListener("click", async () => {
-  if (!confirm("Cancel your existing Morphara subscription? You will keep its current access until the billing period ends.")) {
+document.getElementById("change-password-btn")?.addEventListener("click", async () => {
+  const password = document.getElementById("settings-new-password")?.value || "";
+  const message = document.getElementById("settings-password-message");
+  if (password.length < 8) {
+    if (message) message.textContent = "Use at least 8 characters for your new password.";
     return;
   }
-
-
-  if (window.posthog) {
-    posthog.capture('subscription_cancel_clicked');
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    if (message) message.textContent = error.message;
+    return;
   }
+  document.getElementById("settings-new-password").value = "";
+  if (message) message.textContent = "Password updated.";
+});
 
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+document.getElementById("settings-library-btn")?.addEventListener("click", () => {
+  settingsOverlay.style.display = "none";
+  openPurchasedCharacters();
+});
 
-
-    const response = await fetch(`${WORKER_URL}/cancel-subscription`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (response.ok) {
-      const result = await response.json();
-
-
-        if (window.posthog) {
-          posthog.capture('subscription_cancelled', {
-            user_id: session.user.id
-          });
-        }
-      const msg = result.expiryDate
-        ? `Subscription cancelled. Access continues until ${result.expiryDate}.`
-        : "Subscription cancelled. Access continues until end of billing period.";
-      showToast(msg, 4000);
-      settingsOverlay.style.display = "none";
-
-      const { data: { session: s } } = await supabase.auth.getSession();
-      if (s) await fetchAndDisplayPlan(s.user.id);
-    } else {
-      const error = await response.json();
-      showToast(`Failed to cancel: ${error.error || 'Unknown error'}`);
-    }
-  } catch (error) {
-    console.error('Cancel subscription error:', error);
-    showToast("Failed to cancel subscription");
-  }
+document.getElementById("settings-signout-btn")?.addEventListener("click", async () => {
+  const { error } = await supabase.auth.signOut();
+  if (error) { showToast(error.message); return; }
+  settingsOverlay.style.display = "none";
+  showToast("Signed out.");
 });
 
 
@@ -3482,9 +3562,25 @@ document.getElementById("delete-account-btn")?.addEventListener("click", async (
 
 supabase.auth.onAuthStateChange((event, session) => {
   updateUserMenu(session ?? null);
+  if (session && pendingExportAfterSignIn) {
+    pendingExportAfterSignIn = false;
+    document.getElementById("auth-overlay")?.classList.add("hidden");
+    document.getElementById("export-panel-overlay")?.classList.remove("hidden");
+    refreshCharacterPrice();
+    updateExportButton();
+    renderExportPreview();
+  }
   if (session && !document.getElementById("purchases-overlay")?.classList.contains("hidden")) {
     openPurchasedCharacters();
   }
+});
+
+document.getElementById("close-character-viewer")?.addEventListener("click", () => {
+  const overlay = document.getElementById("character-viewer-overlay");
+  const host = document.getElementById("character-viewer-canvas");
+  if (host?._cleanup) host._cleanup();
+  host?.replaceChildren();
+  overlay?.classList.add("hidden");
 });
 
 
