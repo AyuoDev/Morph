@@ -1682,6 +1682,17 @@ async function purchaseCurrentCharacter() {
   const purchase = await prepareResponse.json();
   if (!prepareResponse.ok) throw new Error(purchase.error || "Could not prepare this character.");
 
+  if (purchase.checkoutUrl) {
+    window.location.assign(purchase.checkoutUrl);
+    return;
+  }
+
+  if (purchase.paymentProcessing) {
+    showToast("Payment is already processing. Check My Characters shortly.", 5000);
+    await openPurchasedCharacters();
+    return;
+  }
+
   if (purchase.alreadyPurchased) {
     await downloadPurchasedCharacter(purchase.purchaseId);
     showToast("You already own this character. Downloaded it again.", 3500);
@@ -1691,7 +1702,7 @@ async function purchaseCurrentCharacter() {
 
   const { error: uploadError } = await supabase.storage
     .from("character-purchases")
-    .upload(purchase.filePath, blob, { contentType: "model/gltf-binary", upsert: false, cacheControl: "3600" });
+    .upload(purchase.filePath, blob, { contentType: "model/gltf-binary", upsert: true, cacheControl: "3600" });
   if (uploadError) throw new Error(`Could not save your character: ${uploadError.message}`);
 
   const checkoutResponse = await fetch(`${WORKER_URL}/character-purchase-checkout`, {
@@ -1832,10 +1843,13 @@ function downloadBlob(blob, filename) {
 }
 
 async function downloadPurchasedCharacter(purchaseId) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Sign in to download your characters.");
   const { data: purchase, error: purchaseError } = await supabase
     .from("character_purchases")
     .select("id,character_name,file_path,status")
     .eq("id", purchaseId)
+    .eq("user_id", session.user.id)
     .eq("status", "paid")
     .single();
   if (purchaseError || !purchase) throw new Error("This character is not ready to download yet.");
@@ -1866,6 +1880,7 @@ async function openPurchasedCharacters() {
   const { data: purchases, error } = await supabase
     .from("character_purchases")
     .select("id,character_name,base_mesh_id,amount_cents,currency,created_at,file_path,status")
+    .eq("user_id", session.user.id)
     .eq("status", "paid")
     .order("created_at", { ascending: false });
   list.innerHTML = "";
@@ -1914,10 +1929,13 @@ async function openPurchasedCharacters() {
 }
 
 async function viewPurchasedCharacter(purchaseId) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) { showToast("Sign in to view your characters."); return; }
   const { data: purchase, error } = await supabase
     .from("character_purchases")
     .select("file_path,character_name")
     .eq("id", purchaseId)
+    .eq("user_id", session.user.id)
     .eq("status", "paid")
     .single();
   if (error || !purchase) { showToast("Could not load this character."); return; }
@@ -2026,6 +2044,7 @@ async function handleCharacterPurchaseReturn(session) {
       .from("character_purchases")
       .select("id,status")
       .eq("stripe_checkout_session_id", checkoutSessionId)
+      .eq("user_id", session.user.id)
       .maybeSingle();
     if (purchase?.status === "paid") {
       showToast("Character purchased and saved. You can download it again from My Characters.", 5000);
