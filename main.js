@@ -160,11 +160,18 @@ function updateUserMenu(session) {
 
 
     menu.innerHTML = `
-      <span class="user-email">${user.email}</span>
-      <button class="dropdown-item" id="my-characters-btn">📦 My Characters</button>
-      <button class="dropdown-item" id="settings-btn">⚙️ Settings</button>
-      <button class="dropdown-item" id="logout-btn">Log Out</button>
+      <div class="user-menu-header">
+        <span class="user-menu-avatar" id="user-menu-avatar" aria-hidden="true"></span>
+        <span class="user-menu-identity"><span class="user-email" id="user-menu-email"></span><small>Signed in</small></span>
+      </div>
+      <button class="dropdown-item" id="my-characters-btn"><span class="dropdown-icon" aria-hidden="true">▣</span><span>My Characters</span></button>
+      <button class="dropdown-item" id="settings-btn"><span class="dropdown-icon" aria-hidden="true">⚙</span><span>Settings</span></button>
+      <button class="dropdown-item seller-menu-item" id="become-seller-btn"><span class="dropdown-icon" aria-hidden="true">↗</span><span>Become a seller</span></button>
+      <div class="dropdown-divider" role="separator"></div>
+      <button class="dropdown-item logout-menu-item" id="logout-btn"><span class="dropdown-icon" aria-hidden="true">⇥</span><span>Log Out</span></button>
     `;
+    menu.querySelector("#user-menu-email").textContent = user.email || "Your account";
+    menu.querySelector("#user-menu-avatar").textContent = initial;
 
     document.getElementById("settings-btn").addEventListener("click", () => {
       if (window.posthog) {
@@ -208,8 +215,10 @@ function updateUserMenu(session) {
     userBtn.title = "";
 
     menu.innerHTML = `
-      <button class="dropdown-item" data-auth-open="signup">Sign Up</button>
-      <button class="dropdown-item" data-auth-open="login">Log In</button>
+      <button class="dropdown-item seller-menu-item" id="become-seller-btn"><span class="dropdown-icon" aria-hidden="true">↗</span><span>Become a seller</span></button>
+      <div class="dropdown-divider" role="separator"></div>
+      <button class="dropdown-item" data-auth-open="signup"><span class="dropdown-icon" aria-hidden="true">＋</span><span>Sign Up</span></button>
+      <button class="dropdown-item" data-auth-open="login"><span class="dropdown-icon" aria-hidden="true">→</span><span>Log In</span></button>
     `;
 
 
@@ -224,6 +233,11 @@ function updateUserMenu(session) {
 
 
   }
+
+  menu.querySelector("#become-seller-btn")?.addEventListener("click", () => {
+    menu.classList.add("hidden");
+    document.getElementById("seller-info-dialog")?.showModal();
+  });
 }
 
 
@@ -3311,7 +3325,8 @@ const purchasesBtn = document.getElementById("purchases-btn");
 
 userBtn.onclick = (e) => {
   e.stopPropagation();
-  userMenu.classList.toggle("hidden");
+  const isOpen = userMenu.classList.toggle("hidden");
+  userBtn.setAttribute("aria-expanded", String(!isOpen));
 };
 
 purchasesBtn.onclick = (e) => {
@@ -3322,9 +3337,13 @@ purchasesBtn.onclick = (e) => {
 
 document.addEventListener("click", () => {
   userMenu.classList.add("hidden");
+  userBtn.setAttribute("aria-expanded", "false");
 });
 
-userMenu.addEventListener("click", e => e.stopPropagation());
+userMenu.addEventListener("click", e => {
+  e.stopPropagation();
+  if (e.target.closest?.(".dropdown-item")) userBtn.setAttribute("aria-expanded", "false");
+});
 
 
 

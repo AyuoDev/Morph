@@ -17,8 +17,8 @@
   <link rel="canonical" href="https://morphara.com/Morphara">
 
 <link rel="apple-touch-icon" href="images/morphara_icon.png">
-<link rel="stylesheet" href="css/style.css?v=20261105-discord-help">
-<link rel="stylesheet" href="css/editor.css?v=20261105-discord-help">
+<link rel="stylesheet" href="css/style.css?v=20261105-seller-menu">
+<link rel="stylesheet" href="css/editor.css?v=20261105-seller-menu">
 <script src="js/editor-ui.js" defer></script>
 
   <script type="importmap">
@@ -178,7 +178,7 @@
 
     <button class="top-btn" id="purchases-btn" type="button">My Characters</button>
 
-    <button class="top-btn user-btn" id="user-btn">
+    <button class="top-btn user-btn" id="user-btn" type="button" aria-controls="user-menu" aria-expanded="false">
       👤
     </button>
 
@@ -474,7 +474,7 @@
   </section>
 </div>
 <div id="toast" class="toast hidden"></div>
-<script type="module" src="./main.js?v=20261105-character-purchase-retry"></script>
+<script type="module" src="./main.js?v=20261105-seller-menu"></script>
 
 
 
@@ -587,6 +587,7 @@
   </div>
 </div>
 
+<dialog id="seller-info-dialog" class="seller-info-dialog" aria-labelledby="seller-info-title"><form method="dialog"><button class="seller-info-close" aria-label="Close" value="close">×</button></form><span class="seller-info-kicker">MORPHARA MARKETPLACE</span><h2 id="seller-info-title">Become a seller</h2><p>Seller registration is coming soon. We’re preparing creator profiles, asset listings, and payouts. Join the Discord to discuss early access.</p><a class="seller-info-cta" href="https://discord.gg/sZheJdDTNv" target="_blank" rel="noopener noreferrer">Contact me on Discord ↗</a></dialog>
 </body>
 
 </html>
