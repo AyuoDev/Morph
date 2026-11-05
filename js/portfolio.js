@@ -31,7 +31,7 @@ function draw(){
     neighbors.forEach(j=>{const q=projected[j];ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle=`rgba(174,163,210,${.09+(p.z+q.z+2)*.065})`;ctx.lineWidth=.7;ctx.stroke();});
     ctx.beginPath();ctx.arc(p.x,p.y,p.z>0?2:1.2,0,Math.PI*2);ctx.fillStyle=p.z>.3?'#c5f277':'#8e83ac';ctx.fill();
   });
-  [points[26],points[56]].forEach((point,i)=>{const p=project(point,width,height),node=nodes[i];const x=Math.max(node.offsetWidth/2+4,Math.min(width-node.offsetWidth/2-4,p.x));node.style.transform=`translate(calc(-50% + ${x-width/2}px),calc(-50% + ${p.y-height/2}px)) scale(${.9+p.scale*.1})`;node.style.zIndex=p.z>0?'3':'2';});
+  [points[26],points[56],points[44]].forEach((point,i)=>{const node=nodes[i];if(!node)return;const p=project(point,width,height),x=Math.max(node.offsetWidth/2+4,Math.min(width-node.offsetWidth/2-4,p.x));node.style.transform=`translate(calc(-50% + ${x-width/2}px),calc(-50% + ${p.y-height/2}px)) scale(${.9+p.scale*.1})`;node.style.zIndex=p.z>0?'3':'2';});
 }
 function tick(time){if(!paused&&!document.hidden)angle+=Math.min(time-lastTime,40)*.00012;lastTime=time;draw();requestAnimationFrame(tick);}
 function syncPause(){pause.setAttribute('aria-pressed',String(paused));pause.textContent=paused?'Resume rotation ▷':'Pause rotation Ⅱ';}
