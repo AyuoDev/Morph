@@ -1618,7 +1618,11 @@ async function handleExport(type, format) {
   if (type === 'animation' && !activeAction) { showToast('Select an animation before exporting.'); return; }
   if (exportInProgress) return;
   exportInProgress = true;
-  try { await performExport(type, format); } finally { exportInProgress = false; }
+  updateExportButton();
+  try { await performExport(type, format); } finally {
+    exportInProgress = false;
+    updateExportButton();
+  }
 }
 async function performExport(type, format) {
   const overlay = document.getElementById("export-panel-overlay");
@@ -2127,12 +2131,12 @@ window.selectFormat = function(format, buttonElement) {
 function updateExportButton() {
   const btn = document.getElementById('final-export-btn');
   if (!btn) return;
-  const ready = selectedExportType && selectedFormat && (selectedExportType !== "full" || currentCharacterPriceCents != null);
+  const ready = !exportInProgress && selectedExportType && selectedFormat && (selectedExportType !== "full" || currentCharacterPriceCents != null);
   btn.disabled = !ready;
   btn.style.opacity = ready ? '1' : '0.5';
   btn.style.cursor = ready ? 'pointer' : 'not-allowed';
   if (!ready) {
-    btn.textContent = selectedExportType === "full" && currentCharacterPriceCents == null ? "Loading character price…" : "Select options above";
+    btn.textContent = exportInProgress ? "Preparing your character…" : selectedExportType === "full" && currentCharacterPriceCents == null ? "Loading character price…" : "Select options above";
     btn.onclick = null;
     return;
   }
